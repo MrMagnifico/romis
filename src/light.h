@@ -19,6 +19,4 @@ glm::vec3 pointLightContribution(const PointLight& light, const BvhInterface& bv
 glm::vec3 segmentLightContribution(const SegmentLight& light, const BvhInterface& bvh, const Features& features, Ray ray, HitInfo hitInfo);
 glm::vec3 parallelogramLightContribution(const ParallelogramLight& light, const BvhInterface& bvh, const Features& features, Ray ray, HitInfo hitInfo);
 
-
 glm::vec3 computeLightContribution(const Scene& scene, const BvhInterface& bvh, const Features& features, Ray ray, HitInfo hitInfo);
-

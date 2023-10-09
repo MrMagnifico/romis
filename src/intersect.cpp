@@ -12,11 +12,12 @@ DISABLE_WARNINGS_POP()
 #include <limits>
 
 
-bool pointInTriangle(const glm::vec3& v0, const glm::vec3& v1, const glm::vec3& v2, const glm::vec3& n, const glm::vec3& p) {
-    glm::vec3 barycentricCoords = computeBarycentricCoord(v0, v1, v2, p);
-    return inRangeInclusive(barycentricCoords[0], 0.0f, 1.0f) &&
-           inRangeInclusive(barycentricCoords[1], 0.0f, 1.0f) &&
-           inRangeInclusive(barycentricCoords[2], 0.0f, 1.0f);
+Plane trianglePlane(const glm::vec3& v0, const glm::vec3& v1, const glm::vec3& v2) {
+    glm::vec3 e0        = v0 - v2;
+    glm::vec3 e1        = v1 - v2;
+    glm::vec3 normal    = glm::normalize(glm::cross(e0, e1));
+    float D             = glm::dot(normal, v0);
+    return {D, normal};
 }
 
 bool intersectRayWithPlane(const Plane& plane, Ray& ray) {
@@ -26,12 +27,11 @@ bool intersectRayWithPlane(const Plane& plane, Ray& ray) {
     return true;
 }
 
-Plane trianglePlane(const glm::vec3& v0, const glm::vec3& v1, const glm::vec3& v2) {
-    glm::vec3 e0        = v0 - v2;
-    glm::vec3 e1        = v1 - v2;
-    glm::vec3 normal    = glm::normalize(glm::cross(e0, e1));
-    float D             = glm::dot(normal, v0);
-    return {D, normal};
+bool pointInTriangle(const glm::vec3& v0, const glm::vec3& v1, const glm::vec3& v2, const glm::vec3& n, const glm::vec3& p) {
+    glm::vec3 barycentricCoords = computeBarycentricCoord(v0, v1, v2, p);
+    return inRangeInclusive(barycentricCoords[0], 0.0f, 1.0f) &&
+           inRangeInclusive(barycentricCoords[1], 0.0f, 1.0f) &&
+           inRangeInclusive(barycentricCoords[2], 0.0f, 1.0f);
 }
 
 /// Input: the three vertices of the triangle

@@ -16,20 +16,21 @@ DISABLE_WARNINGS_POP()
 //! ********** NO NEED TO USE THESE FILES (FOR GRADING PURPOSES)! *********************** //
 
 struct CameraConfig {
-    float fieldOfView = 50.0f; // in degrees
-    float distanceFromLookAt = 3.0f;
-    glm::vec3 lookAt = { 0.0f, 0.0f, 0.0f };
-    glm::vec3 rotation = { 20.0f, 20.0f, 0.0f }; // in degrees
+    float fieldOfView           = 50.0f; // Degrees
+    float distanceFromLookAt    = 3.0f;
+    glm::vec3 lookAt            = { 0.0f, 0.0f, 0.0f };
+    glm::vec3 rotation          = { 20.0f, 20.0f, 0.0f }; // Degrees
 };
 
 struct Config {
     Features features = {};
 
-    bool cliRenderingEnabled = false;
-    glm::ivec2 windowSize = { 800, 800 };
-    std::filesystem::path dataPath = DATA_DIR;
-    std::variant<SceneType, std::filesystem::path> scene = SceneType::SingleTriangle;
-    std::filesystem::path outputDir = "";
+    bool cliRenderingEnabled                                = false;
+    glm::ivec2 windowSize                                   = { 800, 800 };
+    std::filesystem::path dataPath                          = DATA_DIR;
+    std::variant<SceneType, std::filesystem::path> scene    = SceneType::CornellBoxParallelogramLight;
+    std::filesystem::path outputDir                         = "";
+
     std::vector<CameraConfig> cameras;
     std::vector<std::variant<PointLight, SegmentLight, ParallelogramLight>> lights;
 };
