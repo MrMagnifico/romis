@@ -14,17 +14,10 @@ const glm::vec3 computeShading(const glm::vec3& lightPosition, const glm::vec3& 
                                   acquireTexel(*hitInfo.material.kdTexture.get(), hitInfo.texCoord, features)   :
                                   hitInfo.material.kd;
 
-    // Specular parameters
-    glm::vec3 V                 = glm::normalize(ray.origin - intersectionPos);
-    glm::vec3 R                 = glm::normalize(2.0f * dotNL * hitInfo.normal - L);
-    float cosTheta              = glm::dot(R, V);
-
     // Shading terms and final return
-    glm::vec3 diffuse   = lightColor    * diffuseColor         * dotNL;
-    glm::vec3 specular  = lightColor    * hitInfo.material.ks  * std::pow(cosTheta, hitInfo.material.shininess);
-    diffuse             = glm::any(glm::isnan(diffuse))     ? glm::vec3(0.0f) : diffuse;
-    specular            = glm::any(glm::isnan(specular))    ? glm::vec3(0.0f) : specular;
-    return diffuse + specular;
+    glm::vec3 diffuse   = lightColor * diffuseColor * dotNL;
+    diffuse             = glm::any(glm::isnan(diffuse)) ? glm::vec3(0.0f) : diffuse;
+    return diffuse;
 }
 
 const Ray computeReflectionRay(Ray ray, HitInfo hitInfo) {

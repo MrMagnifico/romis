@@ -2,10 +2,13 @@
 #ifndef _RESERVOIR_H_
 #define _RESERVOIR_H_
 
+#include "common.h"
+
 #include <framework/disable_all_warnings.h>
 DISABLE_WARNINGS_PUSH()
 #include <glm/vec3.hpp>
 DISABLE_WARNINGS_POP()
+#include <framework/ray.h>
 #include <vector>
 
 struct LightSample {
@@ -14,6 +17,11 @@ struct LightSample {
 };
 
 struct Reservoir {
+    // Intersection position info
+    Ray cameraRay;
+    HitInfo hitInfo;
+
+    // Light sampling
     LightSample outputSample;
     float outputWeight  = 0.0f;
     float wSum          = 0.0f;

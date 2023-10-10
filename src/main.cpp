@@ -64,7 +64,7 @@ int main(int argc, char** argv) {
         Scene scene         = loadScenePrebuilt(sceneType, config.dataPath);
         BvhInterface bvh(&scene);
 
-        ReservoirGrid reservoirGrid(config.windowSize.y, std::vector<Reservoir>(config.windowSize.x));
+        ReservoirGrid previousFrameGrid(config.windowSize.y, std::vector<Reservoir>(config.windowSize.x));
 
         int bvhDebugLevel   = 0;
         int bvhDebugLeaf    = 0;
@@ -182,7 +182,7 @@ int main(int argc, char** argv) {
                     // Perform a new render and measure the time it took to generate the image.
                     using clock = std::chrono::high_resolution_clock;
                     const auto start = clock::now();
-                    renderRayTracing(scene, camera, bvh, screen, reservoirGrid, config.features);
+                    previousFrameGrid = renderRayTracing(scene, camera, bvh, previousFrameGrid, screen, config.features);
                     const auto end = clock::now();
                     std::cout << "Time to render image: " << std::chrono::duration<float, std::milli>(end - start).count() << " milliseconds" << std::endl;
                     // Store the new image.
@@ -326,7 +326,7 @@ int main(int argc, char** argv) {
                     enableDebugDraw = true;
                     glDisable(GL_LIGHTING);
                     glDepthFunc(GL_LEQUAL);
-                    (void)getFinalColor(scene, bvh, *optDebugRay, config.features);
+                    (void)genCanonicalSamples(scene, bvh, config.features, *optDebugRay);
                     enableDebugDraw = false;
                 }
                 glPopAttrib();
@@ -354,7 +354,7 @@ int main(int argc, char** argv) {
             } break;
             case ViewMode::RayTracing: {
                 screen.clear(glm::vec3(0.0f));
-                renderRayTracing(scene, camera, bvh, screen, reservoirGrid, config.features);
+                previousFrameGrid = renderRayTracing(scene, camera, bvh, previousFrameGrid, screen, config.features);
                 screen.setPixel(0, 0, glm::vec3(1.0f));
                 screen.draw(); // Takes the image generated using ray tracing and outputs it to the screen using OpenGL.
             } break;
@@ -391,7 +391,7 @@ int main(int argc, char** argv) {
 
         BvhInterface bvh { &scene };
 
-        ReservoirGrid reservoirGrid(config.windowSize.y, std::vector<Reservoir>(config.windowSize.x));
+        ReservoirGrid previousFrameGrid(config.windowSize.y, std::vector<Reservoir>(config.windowSize.x));
 
         using clock = std::chrono::high_resolution_clock;
         // Create output directory if it does not exist.
@@ -409,9 +409,9 @@ int main(int argc, char** argv) {
                 screen.clear(glm::vec3(0.0f));
                 Trackball camera { &window, glm::radians(cameraConfig.fieldOfView), cameraConfig.distanceFromLookAt };
                 camera.setCamera(cameraConfig.lookAt, glm::radians(cameraConfig.rotation), cameraConfig.distanceFromLookAt);
-                renderRayTracing(scene, camera, bvh, screen, reservoirGrid, config.features);
-                const auto filename_base = fmt::format("{}_{}_cam_{}", sceneName, start_time_string, index);
-                const auto filepath = config.outputDir / (filename_base + ".bmp");
+                previousFrameGrid           = renderRayTracing(scene, camera, bvh, previousFrameGrid, screen, config.features);
+                const auto filename_base    = fmt::format("{}_{}_cam_{}", sceneName, start_time_string, index);
+                const auto filepath         = config.outputDir / (filename_base + ".bmp");
                 fmt::print("Image {} saved to {}\n", index, filepath.string());
                 screen.writeBitmapToFile(filepath);
             },

@@ -14,12 +14,9 @@ class Trackball;
 class BvhInterface;
 struct Features;
 
-
-
-// Get the color of a ray.
-glm::vec3 getFinalColor(const Scene& scene, const BvhInterface& bvh, Ray ray, const Features& features, int rayDepth = 0);
+ReservoirGrid genInitialSamples(const Scene& scene, const Trackball& camera, const BvhInterface& bvh, Screen& screen, const Features& features);
 
 // Main rendering function.
-void renderRayTracing(const Scene& scene, const Trackball& camera,
-                      const BvhInterface& bvh, Screen& screen, ReservoirGrid& reservoirGrid,
-                      const Features& features);
+ReservoirGrid renderRayTracing(const Scene& scene, const Trackball& camera,
+                               const BvhInterface& bvh, const ReservoirGrid& previousFrameGrid, Screen& screen,
+                               const Features& features);

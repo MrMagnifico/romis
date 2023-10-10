@@ -52,54 +52,36 @@ bool testVisibilityLightSample(const glm::vec3& samplePos, const BvhInterface& b
     return false;
 }
 
-glm::vec3 pointLightContribution(const PointLight& light, const BvhInterface& bvh, const Features& features, Ray ray, HitInfo hitInfo) {
-    if (features.enableHardShadow && !testVisibilityLightSample(light.position, bvh, features, ray, hitInfo)) { return glm::vec3(0.0f); }
-    return computeShading(light.position, light.color, features, ray, hitInfo);
-}
-
-glm::vec3 segmentLightContribution(const SegmentLight& light, const BvhInterface& bvh, const Features& features, Ray ray, HitInfo hitInfo) {
-    // Generate sample
-    glm::vec3 samplePos, sampleCol;
-    sampleSegmentLight(light, samplePos, sampleCol);
-    
-    // Visibility and shading
-    if (features.enableSoftShadow && !testVisibilityLightSample(samplePos, bvh, features, ray, hitInfo)) { return glm::vec3(0.0f); }
-    return computeShading(samplePos, sampleCol, features, ray, hitInfo);
-}
-
-glm::vec3 parallelogramLightContribution(const ParallelogramLight& light, const BvhInterface& bvh, const Features& features, Ray ray, HitInfo hitInfo) {
-    // Generate sample
-    glm::vec3 samplePos, sampleCol;
-    sampleParallelogramLight(light, samplePos, sampleCol);
-    
-    // Visibility and shading
-    if (features.enableSoftShadow && !testVisibilityLightSample(samplePos, bvh, features, ray, hitInfo)) { return glm::vec3(0.0f); }
-    return computeShading(samplePos, sampleCol, features, ray, hitInfo);
-}
-
 // Given an intersection, computes the contribution from all light sources at the intersection point
 // in this method you should cycle the light sources and for each one compute their contribution
 // don't forget to check for visibility (shadows!)
-glm::vec3 computeLightContribution(const Scene& scene, const BvhInterface& bvh, const Features& features, Ray ray, HitInfo hitInfo) {
-    if (!features.enableShading) { return hitInfo.material.kd; }
-
-    // No lights to sample, just return black
-    if (scene.lights.size() == 0UL) { return glm::vec3(0.0f); }
+Reservoir genCanonicalSamples(const Scene& scene, const BvhInterface& bvh, const Features& features, Ray ray) {
+    Reservoir reservoir;
     
+    // No lights to sample, just return
+    if (scene.lights.size() == 0UL) { return reservoir; }
+    
+    // Compute camera ray intersection with scene
+    bool intersectScene = bvh.intersect(ray, reservoir.hitInfo, features);
+    reservoir.cameraRay = ray;
+    if (!intersectScene) {   
+        drawRay(ray, CAMERA_RAY_NO_HIT_COLOR);  // Draw a red debug ray if the ray missed
+        return reservoir;                           // Not intersection with scene, so empty reservoir
+    }
+
     // Uniform selection of light sources
     // TODO: Figure out better solution than uniform sampling (fuck you, point lights)
     std::random_device rd;
     std::mt19937 gen(rd());
     std::uniform_int_distribution<> distr(0, scene.lights.size() - 1UL);
 
-    // Properties of intersection point
+    // Compute intersection point properties
     glm::vec3 intersectionPosition  = ray.origin + (ray.t * ray.direction);
-    glm::vec3 diffuseColor          = features.enableTextureMapping && hitInfo.material.kdTexture                   ?
-                                      acquireTexel(*hitInfo.material.kdTexture.get(), hitInfo.texCoord, features)   :
-                                      hitInfo.material.kd;
+    glm::vec3 diffuseColor          = features.enableTextureMapping && reservoir.hitInfo.material.kdTexture                             ?
+                                      acquireTexel(*reservoir.hitInfo.material.kdTexture.get(), reservoir.hitInfo.texCoord, features)   :
+                                      reservoir.hitInfo.material.kd;
 
     // Obtain initial light samples
-    Reservoir reservoir;
     for (uint32_t sampleIdx = 0U; sampleIdx < features.initialLightSamples; sampleIdx++) {
         // Generate sample
         LightSample sample;
@@ -120,13 +102,14 @@ glm::vec3 computeLightContribution(const Scene& scene, const BvhInterface& bvh, 
         float sampleWeight = targetPDF(diffuseColor, sample, intersectionPosition) / (1.0f / static_cast<float>(scene.lights.size())); // We uniformly sample all lights, so distribution PDF is uniform
         reservoir.update(sample, sampleWeight); 
     }
+
+    // Set output weight do optional visibility check
     reservoir.outputWeight = (1.0f / targetPDF(diffuseColor, reservoir.outputSample, intersectionPosition)) * 
                              (1.0f / reservoir.numSamples) *
                              reservoir.wSum;
-
-    // Visibility check for surviving canonical sample(s)
-    if (features.initalSamplesVisibilityCheck && !testVisibilityLightSample(reservoir.outputSample.position, bvh, features, ray, hitInfo)) { reservoir.outputWeight = 0.0f; }
-
-    // Final shading
-    return computeShading(reservoir.outputSample.position, reservoir.outputSample.color, features, ray, hitInfo) * reservoir.outputWeight;
+    if (features.initalSamplesVisibilityCheck && !testVisibilityLightSample(reservoir.outputSample.position, bvh, features, ray, reservoir.hitInfo)) { reservoir.outputWeight = 0.0f; }
+    
+    // Draw debug ray and return
+    drawRay(reservoir.cameraRay, CAMERA_RAY_HIT_COLOR);
+    return reservoir;
 }
