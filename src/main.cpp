@@ -2,6 +2,7 @@
 #include "draw.h"
 #include "light.h"
 #include "render.h"
+#include "reservoir.h"
 #include "screen.h"
 // Suppress warnings in third-party code.
 #include <framework/disable_all_warnings.h>
@@ -42,15 +43,11 @@ static void drawLightsOpenGL(const Scene& scene, const Trackball& camera, int se
 static void drawSceneOpenGL(const Scene& scene);
 bool sliderIntSquarePower(const char* label, int* v, int v_min, int v_max);
 
-int main(int argc, char** argv)
-{
+int main(int argc, char** argv) {
+    // Read config file if provided
     Config config = {};
-    if (argc > 1) {
-        config = readConfigFile(argv[1]);
-    } else {
-        // Add a default camera if no config file is given.
-        config.cameras.emplace_back(CameraConfig {});
-    }
+    if (argc > 1)   { config = readConfigFile(argv[1]); }
+    else            { config.cameras.emplace_back(CameraConfig {}); } // Add a default camera if no config file is given.
 
     if (!config.cliRenderingEnabled) {
         Trackball::printHelp();
@@ -62,35 +59,40 @@ int main(int argc, char** argv)
         Trackball camera { &window, glm::radians(config.cameras[0].fieldOfView), config.cameras[0].distanceFromLookAt };
         camera.setCamera(config.cameras[0].lookAt, glm::radians(config.cameras[0].rotation), config.cameras[0].distanceFromLookAt);
 
-        SceneType sceneType { SceneType::SingleTriangle };
+        SceneType sceneType = SceneType::CornellBoxParallelogramLight;
         std::optional<Ray> optDebugRay;
-        Scene scene = loadScenePrebuilt(sceneType, config.dataPath);
-        BvhInterface bvh { &scene };
+        Scene scene         = loadScenePrebuilt(sceneType, config.dataPath);
+        BvhInterface bvh(&scene);
 
-        int bvhDebugLevel = 0;
-        int bvhDebugLeaf = 0;
-        bool debugBVHLevel { false };
-        bool debugBVHLeaf { false };
-        ViewMode viewMode { ViewMode::Rasterization };
+        ReservoirGrid reservoirGrid(config.windowSize.y, std::vector<Reservoir>(config.windowSize.x));
+
+        int bvhDebugLevel   = 0;
+        int bvhDebugLeaf    = 0;
+        bool debugBVHLevel  = false;
+        bool debugBVHLeaf   = false;
+        ViewMode viewMode   = ViewMode::Rasterization;
 
         window.registerKeyCallback([&](int key, int /* scancode */, int action, int /* mods */) {
             if (action == GLFW_PRESS) {
                 switch (key) {
-                case GLFW_KEY_R: {
                     // Shoot a ray. Produce a ray from camera to the far plane.
-                    const auto tmp = window.getNormalizedCursorPos();
-                        optDebugRay = camera.generateRay(tmp * 2.0f - 1.0f);
-                } break;
-                case GLFW_KEY_A: {
-                    debugBVHLeafId++;
-                } break;
-                case GLFW_KEY_S: {
-                    debugBVHLeafId = std::max(0, debugBVHLeafId - 1);
-
-                } break;
-                case GLFW_KEY_ESCAPE: {
-                    window.close();
-                } break;
+                    case GLFW_KEY_R: {
+                        const auto tmp  = window.getNormalizedCursorPos();
+                        optDebugRay     = camera.generateRay(tmp * 2.0f - 1.0f);
+                        break;
+                    }
+                    case GLFW_KEY_A: {
+                        debugBVHLeafId++;
+                        break;
+                    }
+                    case GLFW_KEY_S: {
+                        debugBVHLeafId = std::max(0, debugBVHLeafId - 1);
+                        break;
+                    }
+                    case GLFW_KEY_ESCAPE: {
+                        window.close();
+                        break;
+                    }
                 };
             }
         });
@@ -99,7 +101,7 @@ int main(int argc, char** argv)
         while (!window.shouldClose()) {
             window.updateInput();
 
-            // === Setup the UI ===
+            // Set up the UI
             ImGui::Begin("Final Project");
             {
                 constexpr std::array items {
@@ -180,7 +182,7 @@ int main(int argc, char** argv)
                     // Perform a new render and measure the time it took to generate the image.
                     using clock = std::chrono::high_resolution_clock;
                     const auto start = clock::now();
-                    renderRayTracing(scene, camera, bvh, screen, config.features);
+                    renderRayTracing(scene, camera, bvh, screen, reservoirGrid, config.features);
                     const auto end = clock::now();
                     std::cout << "Time to render image: " << std::chrono::duration<float, std::milli>(end - start).count() << " milliseconds" << std::endl;
                     // Store the new image.
@@ -352,7 +354,7 @@ int main(int argc, char** argv)
             } break;
             case ViewMode::RayTracing: {
                 screen.clear(glm::vec3(0.0f));
-                renderRayTracing(scene, camera, bvh, screen, config.features);
+                renderRayTracing(scene, camera, bvh, screen, reservoirGrid, config.features);
                 screen.setPixel(0, 0, glm::vec3(1.0f));
                 screen.draw(); // Takes the image generated using ray tracing and outputs it to the screen using OpenGL.
             } break;
@@ -389,6 +391,8 @@ int main(int argc, char** argv)
 
         BvhInterface bvh { &scene };
 
+        ReservoirGrid reservoirGrid(config.windowSize.y, std::vector<Reservoir>(config.windowSize.x));
+
         using clock = std::chrono::high_resolution_clock;
         // Create output directory if it does not exist.
         if (!std::filesystem::exists(config.outputDir)) {
@@ -405,7 +409,7 @@ int main(int argc, char** argv)
                 screen.clear(glm::vec3(0.0f));
                 Trackball camera { &window, glm::radians(cameraConfig.fieldOfView), cameraConfig.distanceFromLookAt };
                 camera.setCamera(cameraConfig.lookAt, glm::radians(cameraConfig.rotation), cameraConfig.distanceFromLookAt);
-                renderRayTracing(scene, camera, bvh, screen, config.features);
+                renderRayTracing(scene, camera, bvh, screen, reservoirGrid, config.features);
                 const auto filename_base = fmt::format("{}_{}_cam_{}", sceneName, start_time_string, index);
                 const auto filepath = config.outputDir / (filename_base + ".bmp");
                 fmt::print("Image {} saved to {}\n", index, filepath.string());

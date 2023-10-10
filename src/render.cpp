@@ -26,7 +26,9 @@ glm::vec3 getFinalColor(const Scene& scene, const BvhInterface& bvh, Ray ray, co
     }
 }
 
-void renderRayTracing(const Scene& scene, const Trackball& camera, const BvhInterface& bvh, Screen& screen, const Features& features) {
+void renderRayTracing(const Scene& scene, const Trackball& camera,
+                      const BvhInterface& bvh, Screen& screen, ReservoirGrid& reservoirGrid,
+                      const Features& features) {
     glm::ivec2 windowResolution = screen.resolution();
     
     // Enable multi threading in Release mode

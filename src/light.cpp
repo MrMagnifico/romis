@@ -1,5 +1,7 @@
 #include "config.h"
 #include "light.h"
+#include "reservoir.h"
+#include "texture.h"
 #include "utils.h"
 // Suppress warnings in third-party code.
 #include <framework/disable_all_warnings.h>
@@ -7,6 +9,8 @@ DISABLE_WARNINGS_PUSH()
 #include <glm/geometric.hpp>
 DISABLE_WARNINGS_POP()
 #include <cmath>
+#include <random>
+#include <vector>
 
 
 // samples a segment light source
@@ -78,21 +82,51 @@ glm::vec3 parallelogramLightContribution(const ParallelogramLight& light, const 
 // don't forget to check for visibility (shadows!)
 glm::vec3 computeLightContribution(const Scene& scene, const BvhInterface& bvh, const Features& features, Ray ray, HitInfo hitInfo) {
     if (!features.enableShading) { return hitInfo.material.kd; }
+
+    // No lights to sample, just return black
+    if (scene.lights.size() == 0UL) { return glm::vec3(0.0f); }
     
-    // TODO: Modify visiblity testing for ReSTIR sampling behaviour
-    // Use single sample for non point lights
-    glm::vec3 finalColor(0.0f);
-    for (const auto& light : scene.lights) {
+    // Uniform selection of light sources
+    // TODO: Figure out better solution than uniform sampling (fuck you, point lights)
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_int_distribution<> distr(0, scene.lights.size() - 1UL);
+
+    // Properties of intersection point
+    glm::vec3 intersectionPosition  = ray.origin + (ray.t * ray.direction);
+    glm::vec3 diffuseColor          = features.enableTextureMapping && hitInfo.material.kdTexture                   ?
+                                      acquireTexel(*hitInfo.material.kdTexture.get(), hitInfo.texCoord, features)   :
+                                      hitInfo.material.kd;
+
+    // Obtain initial light samples
+    Reservoir reservoir;
+    for (uint32_t sampleIdx = 0U; sampleIdx < features.initialLightSamples; sampleIdx++) {
+        // Generate sample
+        LightSample sample;
+        const auto& light = scene.lights[distr(gen)];
         if (std::holds_alternative<PointLight>(light)) {
-            const PointLight pointLight                 = std::get<PointLight>(light);
-            finalColor                                  += pointLightContribution(pointLight, bvh, features, ray, hitInfo);
+            const PointLight pointLight = std::get<PointLight>(light);
+            sample.position             = pointLight.position;
+            sample.color                = pointLight.color;
         } else if (std::holds_alternative<SegmentLight>(light)) {
-            const SegmentLight segmentLight             = std::get<SegmentLight>(light);
-            finalColor                                  += segmentLightContribution(segmentLight, bvh, features, ray, hitInfo);
+            const SegmentLight segmentLight = std::get<SegmentLight>(light);
+            sampleSegmentLight(segmentLight, sample.position, sample.color);
         } else if (std::holds_alternative<ParallelogramLight>(light)) {
             const ParallelogramLight parallelogramLight = std::get<ParallelogramLight>(light);
-            finalColor                                  += parallelogramLightContribution(parallelogramLight, bvh, features, ray, hitInfo);
+            sampleParallelogramLight(parallelogramLight, sample.position, sample.color);
         }
+
+        // Update reservoir
+        float sampleWeight = targetPDF(diffuseColor, sample, intersectionPosition) / (1.0f / static_cast<float>(scene.lights.size())); // We uniformly sample all lights, so distribution PDF is uniform
+        reservoir.update(sample, sampleWeight); 
     }
-    return finalColor;
+    reservoir.outputWeight = (1.0f / targetPDF(diffuseColor, reservoir.outputSample, intersectionPosition)) * 
+                             (1.0f / reservoir.numSamples) *
+                             reservoir.wSum;
+
+    // Visibility check for surviving canonical sample(s)
+    if (features.initalSamplesVisibilityCheck && !testVisibilityLightSample(reservoir.outputSample.position, bvh, features, ray, hitInfo)) { reservoir.outputWeight = 0.0f; }
+
+    // Final shading
+    return computeShading(reservoir.outputSample.position, reservoir.outputSample.color, features, ray, hitInfo) * reservoir.outputWeight;
 }

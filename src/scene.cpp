@@ -46,10 +46,10 @@ Scene loadScenePrebuilt(SceneType type, const std::filesystem::path& dataDir)
             .v0 = glm::vec3(-0.2f, 0.5f, 0),
             .edge01 = glm::vec3(0.4f, 0, 0),
             .edge02 = glm::vec3(0.0f, 0.0f, 0.4f),
-            .color0 = glm::vec3(1, 0, 0), // Red
-            .color1 = glm::vec3(0, 1, 0), // Green
-            .color2 = glm::vec3(0, 0, 1), // Blue
-            .color3 = glm::vec3(0, 1, 1), // Purple
+            .color0 = glm::vec3(1.0f, 1.0f, 1.0f), // White
+            .color1 = glm::vec3(0.5f, 0.5f, 0.5f), // Grey
+            .color2 = glm::vec3(0.5f, 0.5f, 0.5f), // Grey
+            .color3 = glm::vec3(1.0f, 1.0f, 1.0f), // White
         });
     } break;
     case Monkey: {

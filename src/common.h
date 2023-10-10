@@ -67,15 +67,19 @@ struct ExtraFeatures {
 struct Features {
     // Feature flags
     bool enableShading          = true;
-    bool enableRecursive        = true;
+    bool enableRecursive        = false;
     bool enableHardShadow       = true;
     bool enableSoftShadow       = true;
     bool enableNormalInterp     = true;
     bool enableTextureMapping   = true;
     bool enableAccelStructure   = false;
 
-    // Render parameters
-    uint32_t maxReflectionRecursion = 5UL;
+    // Base render parameters
+    uint32_t maxReflectionRecursion = 5U;
+
+    // ReSTIR parameters
+    uint32_t initialLightSamples        = 32U;
+    bool initalSamplesVisibilityCheck   = true;
 
     ExtraFeatures extra = {};
 };

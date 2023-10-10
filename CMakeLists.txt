@@ -17,17 +17,18 @@ find_package(OpenGL REQUIRED)
 find_package(OpenMP REQUIRED)
 
 add_library(CGFinProjLib
-	"src/scene.cpp"
-	"src/draw.cpp"
-	"src/screen.cpp"
 	"src/bounding_volume_hierarchy.cpp"
 	"src/bvh_interface.cpp"
-	"src/light.cpp"
 	"src/config.cpp"
-	"src/texture.cpp"
-	"src/shading.cpp"
+	"src/draw.cpp"
 	"src/interpolate.cpp"
+	"src/light.cpp"
 	"src/render.cpp"
+	"src/reservoir.cpp"
+	"src/scene.cpp"
+	"src/screen.cpp"
+	"src/shading.cpp"
+	"src/texture.cpp"
 	"src/utils.cpp"
 )
 
