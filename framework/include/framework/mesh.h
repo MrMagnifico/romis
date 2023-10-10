@@ -20,10 +20,10 @@ struct Vertex {
 };
 
 struct Material {
-	glm::vec3 kd; // Diffuse color.
-	glm::vec3 ks{ 0.0f };
-	float shininess{ 1.0f };
-	float transparency{ 1.0f };
+	glm::vec3 kd		{ 0.0f };
+	glm::vec3 ks		{ 0.0f };
+	float shininess		{ 1.0f };
+	float transparency	{ 1.0f };
 
 	// Optional texture that replaces kd; use as follows:
 	// 

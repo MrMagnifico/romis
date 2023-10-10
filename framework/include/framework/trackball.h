@@ -26,17 +26,22 @@ public:
 	[[nodiscard]] glm::vec3 up() const;
 	[[nodiscard]] glm::vec3 forward() const;
 
-	[[nodiscard]] glm::vec3 position() const; // Position of the camera.
-	[[nodiscard]] glm::vec3 lookAt() const; // Point that the camera is looking at / rotating around.
+	[[nodiscard]] glm::vec3 position() const;	// Position of the camera.
+	[[nodiscard]] glm::vec3 lookAt() const; 	// Point that the camera is looking at / rotating around.
 	[[nodiscard]] glm::mat4 viewMatrix() const;
 	[[nodiscard]] glm::mat4 projectionMatrix() const;
-        [[nodiscard]] glm::vec3 rotationEulerAngles() const;
-        [[nodiscard]] float distanceFromLookAt() const;
+	[[nodiscard]] glm::vec3 rotationEulerAngles() const;
+	[[nodiscard]] float distanceFromLookAt() const;
 
-	void setCamera(const glm::vec3 lookAt, const glm::vec3 rotations, const float dist); // Set the position and orientation of the camera.
+	// Set the position and orientation of the camera.
+	void setCamera(const glm::vec3 lookAt, const glm::vec3 rotations, const float dist);
+
+	glm::vec2 getLastDelta() const;
+	void resetLastDelta();
 
 	// Generate ray given pixel in NDC space (ranging from -1 to +1. (-1,-1) at bottom left, (+1, +1) at top right).
 	[[nodiscard]] Ray generateRay(const glm::vec2& pixel) const;
+
 
 private:
 
@@ -51,9 +56,12 @@ private:
 	float m_halfScreenSpaceWidth;
 	bool m_canTranslate { true };
 
-	glm::vec3 m_lookAt{ 0.0f }; // Point that the camera is looking at / rotating around.
+	// Spatial camera data
+	glm::vec3 m_lookAt{ 0.0f }; 			// Point that the camera is looking at / rotating around.
 	float m_distanceFromLookAt;
-	glm::vec3 m_rotationEulerAngles{ 0 }; // Rotation as euler angles (in radians).
+	glm::vec3 m_rotationEulerAngles{ 0 };	// Rotation as euler angles (in radians).
 
-	glm::vec2 m_prevCursorPos; // Cursor position.
+	// Screen-space camera data
+	glm::vec2 m_prevCursorPos;		// Cursor position.
+	glm::vec2 m_lastDelta{ 0.0f };	// Last change in motion (effectively the last motion vector). Should be set to zero before input update every frame
 };

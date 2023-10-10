@@ -101,7 +101,7 @@ Reservoir genCanonicalSamples(const Scene& scene, const BvhInterface& bvh, const
         reservoir.update(sample, sampleWeight); 
     }
 
-    // Set output weight do optional visibility check
+    // Set output weight and do optional visibility check
     reservoir.outputWeight = (1.0f / targetPDF(diffuseColor, reservoir.outputSample, intersectionPosition)) * 
                              (1.0f / reservoir.numSamples) *
                              reservoir.wSum;

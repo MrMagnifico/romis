@@ -79,8 +79,9 @@ struct Features {
 
     // ReSTIR feature flags
     bool initialSamplesVisibilityCheck  = true;
-    bool spatialReuse                   = true;
-    bool spatialReuseVisibilityCheck    = true;
+    bool spatialReuse                   = false;
+    bool spatialReuseVisibilityCheck    = false;
+    bool temporalReuse                  = false;
 
     // ReSTIR parameters
     uint32_t initialLightSamples        = 32U;

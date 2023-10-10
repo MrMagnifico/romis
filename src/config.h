@@ -16,10 +16,10 @@ DISABLE_WARNINGS_POP()
 //! ********** NO NEED TO USE THESE FILES (FOR GRADING PURPOSES)! *********************** //
 
 struct CameraConfig {
-    float fieldOfView           = 50.0f; // Degrees
+    float fieldOfView           = 30.0f;                    // Degrees
     float distanceFromLookAt    = 3.0f;
     glm::vec3 lookAt            = { 0.0f, 0.0f, 0.0f };
-    glm::vec3 rotation          = { 20.0f, 20.0f, 0.0f }; // Degrees
+    glm::vec3 rotation          = { 10.0f, 0.0f, 0.0f };    // Degrees
 };
 
 struct Config {

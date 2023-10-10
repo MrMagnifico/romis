@@ -68,6 +68,10 @@ void Trackball::setCamera(const glm::vec3 lookAt, const glm::vec3 rotations, con
     m_distanceFromLookAt = dist;
 }
 
+glm::vec2 Trackball::getLastDelta() const { return m_lastDelta; }
+
+void Trackball::resetLastDelta() { m_lastDelta = glm::vec2(0.0f); }
+
 glm::vec3 Trackball::position() const
 {
     return m_lookAt + glm::quat(m_rotationEulerAngles) * glm::vec3(0, 0, -m_distanceFromLookAt);
@@ -140,17 +144,17 @@ void Trackball::mouseMoveCallback(const glm::vec2& pos)
 
     if (rotateXY || translateXY) {
         // Amount of cursor motion compared to the previous frame. Positive = right/top
-        const glm::vec2 delta = pos - m_prevCursorPos;
+        m_lastDelta = pos - m_prevCursorPos;
 
         if (rotateXY) {
             // Rotate the camera around the lookat point.
-            m_rotationEulerAngles.x = std::clamp(m_rotationEulerAngles.x - glm::radians(delta.y * rotationSpeedFactor), -glm::half_pi<float>(), +glm::half_pi<float>());
-            m_rotationEulerAngles.y -= glm::radians(delta.x * rotationSpeedFactor);
+            m_rotationEulerAngles.x = std::clamp(m_rotationEulerAngles.x - glm::radians(m_lastDelta.y * rotationSpeedFactor), -glm::half_pi<float>(), +glm::half_pi<float>());
+            m_rotationEulerAngles.y -= glm::radians(m_lastDelta.x * rotationSpeedFactor);
 
         } else {
             // Translate the camera in the image plane.
-            m_lookAt += delta.x * translationSpeedFactor * left(); // Mouse right => camera left
-            m_lookAt -= delta.y * translationSpeedFactor * up(); // Mouse up => camera down
+            m_lookAt += m_lastDelta.x * translationSpeedFactor * left();    // Mouse right  => camera left
+            m_lookAt -= m_lastDelta.y * translationSpeedFactor * up();      // Mouse up     => camera down
         }
         m_prevCursorPos = pos;
     }

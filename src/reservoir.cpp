@@ -9,7 +9,7 @@ DISABLE_WARNINGS_POP()
 
 
 void Reservoir::update(LightSample sample, float weight) {
-    numSamples          += 1UL;
+    numSamples          += 1ULL;
     wSum                += weight;
     float uniformRandom = linearMap(static_cast<float>(rand()), 0.0f, RAND_MAX, 0.0f, 1.0f);
     if (uniformRandom < (weight / wSum)) { 
@@ -18,18 +18,19 @@ void Reservoir::update(LightSample sample, float weight) {
     }
 }
 
-void Reservoir::update(Reservoir inputReservoir, const Features& features) {
-    // Compute target PDF of input reservoir's sample using current reservoir's intersection data
-    glm::vec3 albedo                = diffuseAlbedo(hitInfo, features);
-    glm::vec3 intersectionPosition  = cameraRay.origin + (cameraRay.t * cameraRay.direction);
-    float pdfValue                  = targetPDF(albedo, inputReservoir.outputSample, intersectionPosition);
-
-    // Update reservoir values
-    update(inputReservoir.outputSample, pdfValue * inputReservoir.outputWeight * inputReservoir.numSamples);
-    numSamples      += inputReservoir.numSamples;
-    outputWeight    = (1.0f / targetPDF(albedo, outputSample, intersectionPosition)) * 
-                      (1.0f / numSamples) *
-                      wSum;
+void Reservoir::combine(const std::span<Reservoir>& reservoirStream, Reservoir& finalReservoir, const Features& features) {
+    glm::vec3 albedo                = diffuseAlbedo(finalReservoir.hitInfo, features);
+    glm::vec3 intersectionPosition  = finalReservoir.cameraRay.origin + (finalReservoir.cameraRay.t * finalReservoir.cameraRay.direction);
+    size_t totalSampleCount         = 0ULL;
+    for (const Reservoir& reservoir : reservoirStream) {
+        float pdfValue      = targetPDF(albedo, reservoir.outputSample, intersectionPosition);
+        totalSampleCount    += reservoir.numSamples;
+        finalReservoir.update(reservoir.outputSample, pdfValue * reservoir.outputWeight * reservoir.numSamples);
+    }
+    finalReservoir.numSamples   = totalSampleCount;
+    finalReservoir.outputWeight = (1.0f / targetPDF(albedo, finalReservoir.outputSample, intersectionPosition)) * 
+                                  (1.0f / finalReservoir.numSamples) *
+                                  finalReservoir.wSum;
 }
 
 float targetPDF(glm::vec3 diffuseAlbedo, LightSample sample, glm::vec3 intersectionPosition) {
