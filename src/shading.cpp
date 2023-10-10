@@ -1,7 +1,8 @@
-#include "texture.h"
+#include "shading.h"
+#include "utils.h"
+
 #include <cmath>
 #include <glm/geometric.hpp>
-#include <shading.h>
 
 const glm::vec3 computeShading(const glm::vec3& lightPosition, const glm::vec3& lightColor, const Features& features, Ray ray, HitInfo hitInfo) {
     if (!features.enableShading) { return hitInfo.material.kd; }
@@ -10,9 +11,7 @@ const glm::vec3 computeShading(const glm::vec3& lightPosition, const glm::vec3& 
     glm::vec3 intersectionPos   = ray.origin + (ray.t * ray.direction);
     glm::vec3 L                 = glm::normalize(lightPosition - intersectionPos);
     float dotNL                 = glm::dot(hitInfo.normal, L);
-    glm::vec3 diffuseColor      = features.enableTextureMapping && hitInfo.material.kdTexture                   ?
-                                  acquireTexel(*hitInfo.material.kdTexture.get(), hitInfo.texCoord, features)   :
-                                  hitInfo.material.kd;
+    glm::vec3 diffuseColor      = diffuseAlbedo(hitInfo, features);
 
     // Shading terms and final return
     glm::vec3 diffuse   = lightColor * diffuseColor * dotNL;

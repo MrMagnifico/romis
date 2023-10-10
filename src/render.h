@@ -16,6 +16,8 @@ struct Features;
 
 ReservoirGrid genInitialSamples(const Scene& scene, const Trackball& camera, const BvhInterface& bvh, Screen& screen, const Features& features);
 
+void spatialReuse(ReservoirGrid& reservoirGrid, const BvhInterface& bvh, Screen& screen, const Features& features);
+
 // Main rendering function.
 ReservoirGrid renderRayTracing(const Scene& scene, const Trackball& camera,
                                const BvhInterface& bvh, const ReservoirGrid& previousFrameGrid, Screen& screen,

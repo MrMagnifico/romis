@@ -27,8 +27,8 @@ struct Reservoir {
     float wSum          = 0.0f;
     size_t numSamples   = 0UL;
 
-    void update(Reservoir reservoir);
     void update(LightSample sample, float weight);
+    void update(Reservoir inputReservoir, const Features& features);
 };
 
 using ReservoirGrid = std::vector<std::vector<Reservoir>>;

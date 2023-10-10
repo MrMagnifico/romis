@@ -77,9 +77,7 @@ Reservoir genCanonicalSamples(const Scene& scene, const BvhInterface& bvh, const
 
     // Compute intersection point properties
     glm::vec3 intersectionPosition  = ray.origin + (ray.t * ray.direction);
-    glm::vec3 diffuseColor          = features.enableTextureMapping && reservoir.hitInfo.material.kdTexture                             ?
-                                      acquireTexel(*reservoir.hitInfo.material.kdTexture.get(), reservoir.hitInfo.texCoord, features)   :
-                                      reservoir.hitInfo.material.kd;
+    glm::vec3 diffuseColor          = diffuseAlbedo(reservoir.hitInfo, features);
 
     // Obtain initial light samples
     for (uint32_t sampleIdx = 0U; sampleIdx < features.initialLightSamples; sampleIdx++) {
@@ -107,7 +105,7 @@ Reservoir genCanonicalSamples(const Scene& scene, const BvhInterface& bvh, const
     reservoir.outputWeight = (1.0f / targetPDF(diffuseColor, reservoir.outputSample, intersectionPosition)) * 
                              (1.0f / reservoir.numSamples) *
                              reservoir.wSum;
-    if (features.initalSamplesVisibilityCheck && !testVisibilityLightSample(reservoir.outputSample.position, bvh, features, ray, reservoir.hitInfo)) { reservoir.outputWeight = 0.0f; }
+    if (features.initialSamplesVisibilityCheck && !testVisibilityLightSample(reservoir.outputSample.position, bvh, features, ray, reservoir.hitInfo)) { reservoir.outputWeight = 0.0f; }
     
     // Draw debug ray and return
     drawRay(reservoir.cameraRay, CAMERA_RAY_HIT_COLOR);

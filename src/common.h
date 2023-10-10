@@ -77,9 +77,16 @@ struct Features {
     // Base render parameters
     uint32_t maxReflectionRecursion = 5U;
 
+    // ReSTIR feature flags
+    bool initialSamplesVisibilityCheck  = true;
+    bool spatialReuse                   = true;
+    bool spatialReuseVisibilityCheck    = true;
+
     // ReSTIR parameters
     uint32_t initialLightSamples        = 32U;
-    bool initalSamplesVisibilityCheck   = true;
+    uint32_t numNeighboursToSample      = 3U;
+    uint32_t spatialResamplingPasses    = 2U;
+    uint32_t spatialResampleRadius      = 15U;
 
     ExtraFeatures extra = {};
 };
