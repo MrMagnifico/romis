@@ -1,0 +1,263 @@
+#include "ui.h"
+
+#include "render.h"
+#include "utils.h"
+
+#include <framework/disable_all_warnings.h>
+DISABLE_WARNINGS_PUSH()
+#include <glm/gtc/type_ptr.hpp>
+#include <imgui/imgui.h>
+#include <nativefiledialog/nfd.h>
+DISABLE_WARNINGS_POP()
+#include <framework/imguizmo.h>
+#include <framework/variant_helper.h>
+
+#include <array>
+#include <iostream>
+#include <memory>
+#include <variant>
+
+
+UiManager::UiManager(BvhInterface& bvh, Trackball& camera, Config& config, std::optional<Ray>& optDebugRay,
+                     std::shared_ptr<const ReservoirGrid>& previousFrameGrid, Scene& scene, SceneType& sceneType,
+                     Screen& screen, ViewMode& viewMode, Window& window,
+                     int& bvhDebugLevel, int& bvhDebugLeaf, bool& debugBVHLevel, bool& debugBVHLeaf, int& selectedLightIdx)
+    : bvh(bvh)
+    , camera(camera)
+    , config(config)
+    , optDebugRay(optDebugRay)
+    , previousFrameGrid(previousFrameGrid)
+    , scene(scene)
+    , sceneType(sceneType)
+    , screen(screen)
+    , viewMode(viewMode)
+    , window(window)
+    , bvhDebugLevel(bvhDebugLevel)
+    , bvhDebugLeaf(bvhDebugLeaf)
+    , debugBVHLevel(debugBVHLevel)
+    , debugBVHLeaf(debugBVHLeaf)
+    , selectedLightIdx(selectedLightIdx)
+{}
+
+void UiManager::draw() {
+    ImGui::Begin("Seminar Implementation");
+    ImGui::BeginTabBar("Options");
+    if (ImGui::BeginTabItem("General")) {
+        drawProjectTab();
+        ImGui::EndTabItem();
+    }
+    ImGui::EndTabBar();
+}
+
+void UiManager::drawProjectTab() {
+    drawSceneSelection();
+    drawViewModeSelection();
+    ImGui::Separator();
+    drawFeaturesToggles();
+    ImGui::Separator();
+    drawExtraFeaturesToggles();
+    ImGui::Separator();
+    drawCameraStats();
+    ImGui::Spacing();
+    ImGui::Separator();
+    drawRenderToFile();
+    ImGui::Spacing();
+    ImGui::Separator();
+    drawBvhDebug();
+    ImGui::Spacing();
+    ImGui::Separator();
+    drawLightControls();
+}
+
+void UiManager::drawSceneSelection() {
+    constexpr std::array items {
+        "SingleTriangle",
+        "Cube (segment light)",
+        "Cube (textured)",
+        "Cornell Box (with mirror)",
+        "Cornell Box (parallelogram light and mirror)",
+        "Monkey",
+        "Teapot",
+        "Dragon",
+        /* "AABBs",*/ "Spheres", /*"Mixed",*/
+        "Custom",
+    };
+    if (ImGui::Combo("Scenes", reinterpret_cast<int*>(&sceneType), items.data(), int(items.size()))) {
+        optDebugRay.reset();
+        scene               = loadScenePrebuilt(sceneType, config.dataPath);
+        selectedLightIdx    = scene.lights.empty() ? -1 : 0;
+        bvh                 = BvhInterface(&scene);
+        if (optDebugRay) {
+            HitInfo dummy {};
+            bvh.intersect(*optDebugRay, dummy, config.features);
+        }
+    }
+}
+
+void UiManager::drawViewModeSelection() {
+    constexpr std::array items { "Rasterization", "Ray Traced" };
+    ImGui::Combo("View mode", reinterpret_cast<int*>(&viewMode), items.data(), int(items.size()));
+}
+
+void UiManager::drawFeaturesToggles() {
+    if (ImGui::CollapsingHeader("Features", ImGuiTreeNodeFlags_DefaultOpen)) {
+        ImGui::Checkbox("Shading",                  &config.features.enableShading);
+        ImGui::Checkbox("Recursive(reflections)",   &config.features.enableRecursive);
+        ImGui::Checkbox("Hard shadows",             &config.features.enableHardShadow);
+        ImGui::Checkbox("Soft shadows",             &config.features.enableSoftShadow);
+        ImGui::Checkbox("BVH",                      &config.features.enableAccelStructure);
+        ImGui::Checkbox("Texture mapping",          &config.features.enableTextureMapping);
+        ImGui::Checkbox("Normal interpolation",     &config.features.enableNormalInterp);
+    }
+}
+
+void UiManager::drawExtraFeaturesToggles() {
+    if (ImGui::CollapsingHeader("Extra Features")) {
+        ImGui::Checkbox("Environment mapping",                          &config.features.extra.enableEnvironmentMapping);
+        ImGui::Checkbox("BVH SAH binning",                              &config.features.extra.enableBvhSahBinning);
+        ImGui::Checkbox("Bloom effect",                                 &config.features.extra.enableBloomEffect);
+        ImGui::Checkbox("Texture filtering(bilinear interpolation)",    &config.features.extra.enableBilinearTextureFiltering);
+        ImGui::Checkbox("Texture filtering(mipmapping)",                &config.features.extra.enableMipmapTextureFiltering);
+        ImGui::Checkbox("Glossy reflections",                           &config.features.extra.enableGlossyReflection);
+        ImGui::Checkbox("Transparency",                                 &config.features.extra.enableTransparency);
+        ImGui::Checkbox("Depth of field",                               &config.features.extra.enableDepthOfField);
+    }
+}
+
+void UiManager::drawCameraStats() {
+    if (ImGui::TreeNode("Camera (read only)")) {
+        auto lookAt     = camera.lookAt();
+        auto position   = camera.position();
+        auto rotation   = glm::degrees(camera.rotationEulerAngles());
+        auto distance   = camera.distanceFromLookAt();
+        ImGui::InputFloat3("Position", glm::value_ptr(position), "%0.2f", ImGuiInputTextFlags_ReadOnly);
+        ImGui::InputFloat3("LookAt", glm::value_ptr(lookAt), "%0.2f", ImGuiInputTextFlags_ReadOnly);
+        ImGui::InputFloat("Distance from look at", &distance, 0.1f, 0.1f, "%0.2f", ImGuiInputTextFlags_ReadOnly);
+        ImGui::InputFloat3("Rotation", glm::value_ptr(rotation), "%0.2f", ImGuiInputTextFlags_ReadOnly);
+        ImGui::TreePop();
+    }
+}
+
+void UiManager::drawRenderToFile() {
+    if (ImGui::Button("Render to file")) {
+        // Show a file picker.
+        nfdchar_t* pOutPath         = nullptr;
+        const nfdresult_t result    = NFD_SaveDialog("bmp", nullptr, &pOutPath);
+        if (result == NFD_OKAY) {
+            std::filesystem::path outPath { pOutPath };
+            free(pOutPath);                     // NFD is a C API so we have to manually free the memory it allocated.
+            outPath.replace_extension("bmp");   // Make sure that the file extension is *.bmp
+
+            // Perform a new render and measure the time it took to generate the image.
+            using clock         = std::chrono::high_resolution_clock;
+            const auto start    = clock::now();
+            previousFrameGrid   = std::make_shared<const ReservoirGrid>(renderRayTracing(previousFrameGrid, scene, camera, bvh, screen, camera.getLastDelta(), config.features));
+            const auto end      = clock::now();
+            std::cout << "Time to render image: " << std::chrono::duration<float, std::milli>(end - start).count() << " milliseconds" << std::endl;
+            
+            // Store the new image
+            screen.writeBitmapToFile(outPath);
+        }
+    }
+}
+
+void UiManager::drawBvhDebug() {
+    ImGui::Text("Debugging");
+    if (viewMode == ViewMode::Rasterization) {
+        ImGui::Checkbox("Draw BVH Level", &debugBVHLevel);
+        if (debugBVHLevel)  { ImGui::SliderInt("BVH Level", &bvhDebugLevel, 0, bvh.numLevels() - 1); }
+        ImGui::Checkbox("Draw BVH Leaf", &debugBVHLeaf);
+        if (debugBVHLeaf)   { ImGui::SliderInt("BVH Leaf", &bvhDebugLeaf, 1, bvh.numLeaves()); }
+    }
+}
+
+void UiManager::drawLightControls() {
+    ImGui::Text("Lights");
+    
+    // Configure light selection dropdown data
+    std::vector<std::string> options;
+    options.push_back("None");
+    for (size_t i = 0; i < scene.lights.size(); i++) { options.push_back("Light " + std::to_string(i)); }
+    std::vector<const char*> optionsPointers;
+    std::transform(std::begin(options), std::end(options), std::back_inserter(optionsPointers), [](const auto& str) { return str.c_str(); });
+
+    // Offset such that selectedLightIdx=-1 becomes item 0 (None).
+    ++selectedLightIdx;
+    ImGui::Combo("Selected light", &selectedLightIdx, optionsPointers.data(), static_cast<int>(optionsPointers.size()));
+    --selectedLightIdx;
+
+    if (selectedLightIdx >= 0) {
+        setOpenGLMatrices(camera);
+        std::visit(
+            make_visitor(
+                [&](PointLight& light) {
+                    showImGuizmoTranslation(window, camera, light.position); // 3D controls to translate light source.
+                    ImGui::DragFloat3("Light position", glm::value_ptr(light.position), 0.01f, -3.0f, 3.0f);
+                    ImGui::ColorEdit3("Light color", glm::value_ptr(light.color));
+                },
+                [&](SegmentLight& light) {
+                    // 3D controls to translate light source.
+                    static int selectedEndpoint = 0;
+                    if (selectedEndpoint == 0)  { showImGuizmoTranslation(window, camera, light.endpoint0); }
+                    else                        { showImGuizmoTranslation(window, camera, light.endpoint1); }
+
+                    const std::array<const char*, 2> endpointOptions { "Endpoint 0", "Endpoint 1" };
+                    ImGui::Combo("Selected endpoint", &selectedEndpoint, endpointOptions.data(), int(endpointOptions.size()));
+                    ImGui::DragFloat3("Endpoint 0", glm::value_ptr(light.endpoint0), 0.01f, -3.0f, 3.0f);
+                    ImGui::DragFloat3("Endpoint 1", glm::value_ptr(light.endpoint1), 0.01f, -3.0f, 3.0f);
+                    ImGui::ColorEdit3("Color 0", glm::value_ptr(light.color0));
+                    ImGui::ColorEdit3("Color 1", glm::value_ptr(light.color1));
+                },
+                [&](ParallelogramLight& light) {
+                    glm::vec3 vertex1 = light.v0 + light.edge01;
+                    glm::vec3 vertex2 = light.v0 + light.edge02;
+
+                    // 3D controls to translate light source.
+                    static int selectedVertex = 0;
+                    if (selectedVertex == 0)        { showImGuizmoTranslation(window, camera, light.v0); }
+                    else if (selectedVertex == 1)   { showImGuizmoTranslation(window, camera, vertex1); }
+                    else                            { showImGuizmoTranslation(window, camera, vertex2); }
+
+                    const std::array<const char*, 3> vertexOptions { "Vertex 0", "Vertex 1", "Vertex 2" };
+                    ImGui::Combo("Selected vertex", &selectedVertex, vertexOptions.data(), int(vertexOptions.size()));
+                    ImGui::DragFloat3("Vertex 0", glm::value_ptr(light.v0), 0.01f, -3.0f, 3.0f);
+                    ImGui::DragFloat3("Vertex 1", glm::value_ptr(vertex1), 0.01f, -3.0f, 3.0f);
+                    light.edge01 = vertex1 - light.v0;
+                    ImGui::DragFloat3("Vertex 2", glm::value_ptr(vertex2), 0.01f, -3.0f, 3.0f);
+                    light.edge02 = vertex2 - light.v0;
+
+                    ImGui::ColorEdit3("Color 0", glm::value_ptr(light.color0));
+                    ImGui::ColorEdit3("Color 1", glm::value_ptr(light.color1));
+                    ImGui::ColorEdit3("Color 2", glm::value_ptr(light.color2));
+                    ImGui::ColorEdit3("Color 3", glm::value_ptr(light.color3));
+                },
+                [](auto) { /* any other type of light */ }),
+            scene.lights[size_t(selectedLightIdx)]);
+    }
+
+
+    if (ImGui::Button("Add point light")) {
+        selectedLightIdx = int(scene.lights.size());
+        scene.lights.emplace_back(PointLight { .position = glm::vec3(0.0f), .color = glm::vec3(1.0f) });
+    }
+    if (ImGui::Button("Add segment light")) {
+        selectedLightIdx = int(scene.lights.size());
+        scene.lights.emplace_back(SegmentLight { .endpoint0 = glm::vec3(0.0f), .endpoint1 = glm::vec3(1.0f), .color0 = glm::vec3(1, 0, 0), .color1 = glm::vec3(0, 0, 1) });
+    }
+    if (ImGui::Button("Add parallelogram light")) {
+        selectedLightIdx = int(scene.lights.size());
+        scene.lights.emplace_back(ParallelogramLight {
+            .v0 = glm::vec3(0.0f),
+            .edge01 = glm::vec3(1, 0, 0),
+            .edge02 = glm::vec3(0, 1, 0),
+            .color0 = glm::vec3(1, 0, 0),   // red
+            .color1 = glm::vec3(0, 1, 0),   // green
+            .color2 = glm::vec3(0, 0, 1),   // blue
+            .color3 = glm::vec3(1, 1, 1)    // white
+        });
+    }
+    if (selectedLightIdx >= 0 && ImGui::Button("Remove selected light")) {
+        scene.lights.erase(std::begin(scene.lights) + selectedLightIdx);
+        selectedLightIdx = -1;
+    }
+}

@@ -8,6 +8,8 @@
 DISABLE_WARNINGS_PUSH()
 #include <glm/vec3.hpp>
 DISABLE_WARNINGS_POP()
+#include <framework/trackball.h>
+
 #include <limits>
 
 float constexpr ZERO_EPSILON = 1E-5F;
@@ -20,5 +22,7 @@ template<typename T>
 inline bool inRangeInclusive(T val, T low, T high) { return low <= val && val <= high; }
 
 glm::vec3 diffuseAlbedo(const HitInfo& hitInfo, const Features& features);
+
+void setOpenGLMatrices(const Trackball& camera);
 
 #endif

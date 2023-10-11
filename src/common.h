@@ -11,6 +11,11 @@ enum class DrawMode {
     Wireframe
 };
 
+enum class ViewMode {
+    Rasterization = 0,
+    RayTracing = 1
+};
+
 struct HitInfo {
     glm::vec3 normal;
     glm::vec3 barycentricCoord;
