@@ -54,6 +54,8 @@ private:
 
     // ReSTIR UI bits
     void drawRestirTab();
+    void drawRestirFeaturesToggles();
+    void drawRestirParams();
 };
 
 #endif

@@ -46,6 +46,10 @@ void UiManager::draw() {
         drawProjectTab();
         ImGui::EndTabItem();
     }
+    if (ImGui::BeginTabItem("ReSTIR")) {
+        drawRestirTab();
+        ImGui::EndTabItem();
+    }
     ImGui::EndTabBar();
 }
 
@@ -67,6 +71,13 @@ void UiManager::drawProjectTab() {
     ImGui::Spacing();
     ImGui::Separator();
     drawLightControls();
+}
+
+void UiManager::drawRestirTab() {
+    drawRestirFeaturesToggles();
+    ImGui::Spacing();
+    ImGui::Separator();
+    drawRestirParams();
 }
 
 void UiManager::drawSceneSelection() {
@@ -100,7 +111,7 @@ void UiManager::drawViewModeSelection() {
 }
 
 void UiManager::drawFeaturesToggles() {
-    if (ImGui::CollapsingHeader("Features", ImGuiTreeNodeFlags_DefaultOpen)) {
+    if (ImGui::CollapsingHeader("Features")) {
         ImGui::Checkbox("Shading",                  &config.features.enableShading);
         ImGui::Checkbox("Recursive(reflections)",   &config.features.enableRecursive);
         ImGui::Checkbox("Hard shadows",             &config.features.enableHardShadow);
@@ -259,5 +270,23 @@ void UiManager::drawLightControls() {
     if (selectedLightIdx >= 0 && ImGui::Button("Remove selected light")) {
         scene.lights.erase(std::begin(scene.lights) + selectedLightIdx);
         selectedLightIdx = -1;
+    }
+}
+
+void UiManager::drawRestirFeaturesToggles() {
+    if (ImGui::CollapsingHeader("Features", ImGuiTreeNodeFlags_DefaultOpen)) {
+        ImGui::Checkbox("Initial samples visibility check", &config.features.initialSamplesVisibilityCheck);
+        ImGui::Checkbox("Spatial reuse",                    &config.features.spatialReuse);
+        ImGui::Checkbox("Spatial reuse visibility check",   &config.features.spatialReuseVisibilityCheck);
+        ImGui::Checkbox("Temporal reuse",                   &config.features.temporalReuse);
+    }
+}
+
+void UiManager::drawRestirParams() {
+    if (ImGui::CollapsingHeader("Parameters", ImGuiTreeNodeFlags_DefaultOpen)) {
+        ImGui::SliderInt("Canonical sample count",      (int*) &config.features.initialLightSamples,        1, 128);
+        ImGui::SliderInt("Neighbours to sample",        (int*) &config.features.numNeighboursToSample,      1, 10);
+        ImGui::SliderInt("Spatial resampling passes",   (int*) &config.features.spatialResamplingPasses,    1, 5);
+        ImGui::SliderInt("Spatial resample radius",     (int*) &config.features.spatialResampleRadius,      1, 30);
     }
 }
