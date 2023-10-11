@@ -38,7 +38,6 @@ int debugBVHLeafId = 0;
 
 static void drawLightsOpenGL(const Scene& scene, const Trackball& camera, int selectedLight);
 static void drawSceneOpenGL(const Scene& scene);
-bool sliderIntSquarePower(const char* label, int* v, int v_min, int v_max);
 
 int main(int argc, char** argv) {
     // Read config file if provided
@@ -62,12 +61,12 @@ int main(int argc, char** argv) {
         BvhInterface bvh(&scene);
         std::shared_ptr<const ReservoirGrid> previousFrameGrid;
 
-        int bvhDebugLevel   = 0;
-        int bvhDebugLeaf    = 0;
-        bool debugBVHLevel  = false;
-        bool debugBVHLeaf   = false;
-        ViewMode viewMode   = ViewMode::Rasterization;
-        int selectedLightIdx = scene.lights.empty() ? -1 : 0;
+        int bvhDebugLevel       = 0;
+        int bvhDebugLeaf        = 0;
+        bool debugBVHLevel      = false;
+        bool debugBVHLeaf       = false;
+        ViewMode viewMode       = ViewMode::Rasterization;
+        int selectedLightIdx    = scene.lights.empty() ? -1 : 0;
 
         UiManager uiManager(bvh, camera, config, optDebugRay, previousFrameGrid, scene, sceneType, screen, viewMode, window,
                             bvhDebugLevel, bvhDebugLeaf, debugBVHLevel, debugBVHLeaf, selectedLightIdx);
@@ -118,60 +117,57 @@ int main(int argc, char** argv) {
 
             // Draw either using OpenGL (rasterization) or the ray tracing function.
             switch (viewMode) {
-            case ViewMode::Rasterization: {
-                glPushAttrib(GL_ALL_ATTRIB_BITS);
-                if (debugBVHLeaf) {
-                    glEnable(GL_POLYGON_OFFSET_FILL);
-                    // To ensure that debug draw is always visible, adjust the scale used to calculate the depth value.
-                    glPolygonOffset(float(1.4), 1.0);
-                    drawSceneOpenGL(scene);
-                    glDisable(GL_POLYGON_OFFSET_FILL);
-                } else {
-                    drawSceneOpenGL(scene);
-                }
-                if (optDebugRay) {
-                    // Call getFinalColor for the debug ray. Ignore the result but tell the function that it should
-                    // draw the rays instead.
-                    enableDebugDraw = true;
-                    glDisable(GL_LIGHTING);
-                    glDepthFunc(GL_LEQUAL);
-                    (void)genCanonicalSamples(scene, bvh, config.features, *optDebugRay);
-                    enableDebugDraw = false;
-                }
-                glPopAttrib();
-
-                drawLightsOpenGL(scene, camera, selectedLightIdx);
-
-                if (debugBVHLevel || debugBVHLeaf) {
+                case ViewMode::Rasterization: {
                     glPushAttrib(GL_ALL_ATTRIB_BITS);
-                    setOpenGLMatrices(camera);
-                    glDisable(GL_LIGHTING);
-                    glEnable(GL_DEPTH_TEST);
-
-                    // Enable alpha blending. More info at:
-                    // https://learnopengl.com/Advanced-OpenGL/Blending
-                    glEnable(GL_BLEND);
-                    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-                    enableDebugDraw = true;
-                    if (debugBVHLevel)
-                        bvh.debugDrawLevel(bvhDebugLevel);
-                    if (debugBVHLeaf)
-                        bvh.debugDrawLeaf(bvhDebugLeaf);
-                    enableDebugDraw = false;
+                    if (debugBVHLeaf) {
+                        glEnable(GL_POLYGON_OFFSET_FILL);
+                        // To ensure that debug draw is always visible, adjust the scale used to calculate the depth value.
+                        glPolygonOffset(float(1.4), 1.0);
+                        drawSceneOpenGL(scene);
+                        glDisable(GL_POLYGON_OFFSET_FILL);
+                    } else {
+                        drawSceneOpenGL(scene);
+                    }
+                    if (optDebugRay) {
+                        // Call getFinalColor for the debug ray. Ignore the result but tell the function that it should
+                        // draw the rays instead.
+                        enableDebugDraw = true;
+                        glDisable(GL_LIGHTING);
+                        glDepthFunc(GL_LEQUAL);
+                        (void)genCanonicalSamples(scene, bvh, config.features, *optDebugRay);
+                        enableDebugDraw = false;
+                    }
                     glPopAttrib();
-                }
-            } break;
-            case ViewMode::RayTracing: {
-                screen.clear(glm::vec3(0.0f));
-                previousFrameGrid = make_shared<const ReservoirGrid>(renderRayTracing(previousFrameGrid, scene, camera, bvh, screen, camera.getLastDelta(), config.features));
-                screen.setPixel(0, 0, glm::vec3(1.0f));
-                screen.draw(); // Takes the image generated using ray tracing and outputs it to the screen using OpenGL.
-            } break;
-            default:
-                break;
-            }
 
-            ImGui::End();
+                    drawLightsOpenGL(scene, camera, selectedLightIdx);
+
+                    if (debugBVHLevel || debugBVHLeaf) {
+                        glPushAttrib(GL_ALL_ATTRIB_BITS);
+                        setOpenGLMatrices(camera);
+                        glDisable(GL_LIGHTING);
+                        glEnable(GL_DEPTH_TEST);
+
+                        // Enable alpha blending. More info at:
+                        // https://learnopengl.com/Advanced-OpenGL/Blending
+                        glEnable(GL_BLEND);
+                        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+                        enableDebugDraw = true;
+                        if (debugBVHLevel)  { bvh.debugDrawLevel(bvhDebugLevel); }
+                        if (debugBVHLeaf)   { bvh.debugDrawLeaf(bvhDebugLeaf); }
+                        enableDebugDraw = false;
+                        glPopAttrib();
+                    }
+                } break;
+                case ViewMode::RayTracing: {
+                    screen.clear(glm::vec3(0.0f));
+                    previousFrameGrid = make_shared<const ReservoirGrid>(renderRayTracing(previousFrameGrid, scene, camera, bvh, screen, camera.getLastDelta(), config.features));
+                    screen.setPixel(0, 0, glm::vec3(1.0f));
+                    screen.draw(); // Takes the image generated using ray tracing and outputs it to the screen using OpenGL.
+                } break;
+                default:
+                    break;
+                }
+
             window.swapBuffers();
         }
     } else {
@@ -204,9 +200,7 @@ int main(int argc, char** argv) {
         std::shared_ptr<const ReservoirGrid> previousFrameGrid;
 
         // Create output directory if it does not exist.
-        if (!std::filesystem::exists(config.outputDir)) {
-            std::filesystem::create_directories(config.outputDir);
-        }
+        if (!std::filesystem::exists(config.outputDir)) { std::filesystem::create_directories(config.outputDir); }
 
         using clock                     = std::chrono::high_resolution_clock;
         const auto start                = clock::now();
@@ -332,11 +326,4 @@ void drawSceneOpenGL(const Scene& scene) {
 
     // Draw the scene and the ray (if any).
     drawScene(scene);
-}
-
-bool sliderIntSquarePower(const char* label, int* v, int v_min, int v_max) {
-    // Round to the nearest square power.
-    const float v_rounded   = std::round(std::sqrt(float(*v)));
-    *v                      = static_cast<int>(v_rounded * v_rounded);
-    return ImGui::SliderInt(label, v, v_min, v_max);
 }

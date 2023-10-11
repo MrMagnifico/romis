@@ -51,6 +51,7 @@ void UiManager::draw() {
         ImGui::EndTabItem();
     }
     ImGui::EndTabBar();
+    ImGui::End();
 }
 
 void UiManager::drawProjectTab() {
