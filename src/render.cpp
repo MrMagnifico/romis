@@ -113,7 +113,10 @@ ReservoirGrid renderRayTracing(std::shared_ptr<const ReservoirGrid> previousFram
     for (int y = 0; y < windowResolution.y; y++) {
         for (int x = 0; x != windowResolution.x; x++) {
             const Reservoir& reservoir  = reservoirGrid[y][x];
-            glm::vec3 finalColor        = computeShading(reservoir.outputSample.position, reservoir.outputSample.color, features, reservoir.cameraRay, reservoir.hitInfo) * reservoir.outputWeight;
+            glm::vec3 finalColor        = testVisibilityLightSample(reservoir.outputSample.position, bvh, features, reservoir.cameraRay, reservoir.hitInfo)                 ?
+                                          computeShading(reservoir.outputSample.position, reservoir.outputSample.color, features, reservoir.cameraRay, reservoir.hitInfo)   :
+                                          glm::vec3(0.0f);
+            finalColor                  *= reservoir.outputWeight;
             screen.setPixel(x, y, finalColor);
         }
     }

@@ -44,6 +44,6 @@ struct Reservoir {
 
 using ReservoirGrid = std::vector<std::vector<Reservoir>>;
 
-float targetPDF(glm::vec3 diffuseAlbedo, LightSample sample, glm::vec3 intersectionPosition);
+float targetPDF(const LightSample& sample, const Ray& cameraRay, const HitInfo& hitInfo, const Features& features);
 
 #endif

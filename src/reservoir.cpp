@@ -1,4 +1,5 @@
 #include "reservoir.h"
+#include "shading.h"
 #include "utils.h"
 
 #include <framework/disable_all_warnings.h>
@@ -23,18 +24,17 @@ void Reservoir::combine(const std::span<Reservoir>& reservoirStream, Reservoir& 
     glm::vec3 intersectionPosition  = finalReservoir.cameraRay.origin + (finalReservoir.cameraRay.t * finalReservoir.cameraRay.direction);
     size_t totalSampleCount         = 0ULL;
     for (const Reservoir& reservoir : reservoirStream) {
-        float pdfValue      = targetPDF(albedo, reservoir.outputSample, intersectionPosition);
+        float pdfValue      = targetPDF(reservoir.outputSample, reservoir.cameraRay, reservoir.hitInfo, features);
         totalSampleCount    += reservoir.numSamples;
         finalReservoir.update(reservoir.outputSample, pdfValue * reservoir.outputWeight * reservoir.numSamples);
     }
     finalReservoir.numSamples   = totalSampleCount;
-    finalReservoir.outputWeight = (1.0f / targetPDF(albedo, finalReservoir.outputSample, intersectionPosition)) * 
+    finalReservoir.outputWeight = (1.0f / targetPDF(finalReservoir.outputSample, finalReservoir.cameraRay, finalReservoir.hitInfo, features)) * 
                                   (1.0f / finalReservoir.numSamples) *
                                   finalReservoir.wSum;
 }
 
-float targetPDF(glm::vec3 diffuseAlbedo, LightSample sample, glm::vec3 intersectionPosition) {
-    float squaredDistance   = glm::distance(sample.position, intersectionPosition);
-    squaredDistance         *= squaredDistance;
-    return glm::dot(diffuseAlbedo, sample.color) * (1.0f / squaredDistance);
+float targetPDF(const LightSample& sample, const Ray& cameraRay, const HitInfo& hitInfo, const Features& features) {
+    glm::vec3 bsdf = computeShading(sample.position, sample.color, features, cameraRay, hitInfo);
+    return glm::length(bsdf);
 }

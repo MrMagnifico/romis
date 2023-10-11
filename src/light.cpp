@@ -97,12 +97,12 @@ Reservoir genCanonicalSamples(const Scene& scene, const BvhInterface& bvh, const
         }
 
         // Update reservoir
-        float sampleWeight = targetPDF(diffuseColor, sample, intersectionPosition) / (1.0f / static_cast<float>(scene.lights.size())); // We uniformly sample all lights, so distribution PDF is uniform
+        float sampleWeight = targetPDF(sample, reservoir.cameraRay, reservoir.hitInfo, features) / (1.0f / static_cast<float>(scene.lights.size())); // We uniformly sample all lights, so distribution PDF is uniform
         reservoir.update(sample, sampleWeight); 
     }
 
     // Set output weight and do optional visibility check
-    reservoir.outputWeight = (1.0f / targetPDF(diffuseColor, reservoir.outputSample, intersectionPosition)) * 
+    reservoir.outputWeight = (1.0f / targetPDF(reservoir.outputSample, reservoir.cameraRay, reservoir.hitInfo, features)) * 
                              (1.0f / reservoir.numSamples) *
                              reservoir.wSum;
     if (features.initialSamplesVisibilityCheck && !testVisibilityLightSample(reservoir.outputSample.position, bvh, features, ray, reservoir.hitInfo)) { reservoir.outputWeight = 0.0f; }
