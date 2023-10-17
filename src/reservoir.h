@@ -28,7 +28,7 @@ struct Reservoir {
     LightSample outputSample;
     float outputWeight  = 0.0f;
     float wSum          = std::numeric_limits<float>::min();
-    size_t numSamples   = 0UL;
+    size_t numSamples   = 0ULL;
 
     void update(LightSample sample, float weight);
 

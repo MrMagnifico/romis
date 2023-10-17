@@ -20,11 +20,9 @@ void Reservoir::update(LightSample sample, float weight) {
 }
 
 void Reservoir::combine(const std::span<Reservoir>& reservoirStream, Reservoir& finalReservoir, const Features& features) {
-    glm::vec3 albedo                = diffuseAlbedo(finalReservoir.hitInfo, features);
-    glm::vec3 intersectionPosition  = finalReservoir.cameraRay.origin + (finalReservoir.cameraRay.t * finalReservoir.cameraRay.direction);
-    size_t totalSampleCount         = 0ULL;
+    size_t totalSampleCount = 0ULL;
     for (const Reservoir& reservoir : reservoirStream) {
-        float pdfValue      = targetPDF(reservoir.outputSample, reservoir.cameraRay, reservoir.hitInfo, features);
+        float pdfValue      = targetPDF(reservoir.outputSample, finalReservoir.cameraRay, finalReservoir.hitInfo, features);
         totalSampleCount    += reservoir.numSamples;
         finalReservoir.update(reservoir.outputSample, pdfValue * reservoir.outputWeight * reservoir.numSamples);
     }
