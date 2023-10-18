@@ -50,6 +50,10 @@ void UiManager::draw() {
         drawRestirTab();
         ImGui::EndTabItem();
     }
+    if (ImGui::BeginTabItem("Misc")) {
+        drawMiscTab();
+        ImGui::EndTabItem();
+    }
     ImGui::EndTabBar();
     ImGui::End();
 }
@@ -79,6 +83,10 @@ void UiManager::drawRestirTab() {
     ImGui::Spacing();
     ImGui::Separator();
     drawRestirParams();
+}
+
+void UiManager::drawMiscTab() {
+    drawToneMappingControls();
 }
 
 void UiManager::drawSceneSelection() {
@@ -290,5 +298,13 @@ void UiManager::drawRestirParams() {
         ImGui::SliderInt("Neighbours to sample",        (int*) &config.features.numNeighboursToSample,      1, 10);
         ImGui::SliderInt("Spatial resampling passes",   (int*) &config.features.spatialResamplingPasses,    1, 5);
         ImGui::SliderInt("Spatial resample radius",     (int*) &config.features.spatialResampleRadius,      1, 30);
+    }
+}
+
+void UiManager::drawToneMappingControls() {
+    if (ImGui::CollapsingHeader("Tone Mapping", ImGuiTreeNodeFlags_DefaultOpen)) {
+        ImGui::Checkbox("Enable tone mapping",  &config.features.enableToneMapping);
+        ImGui::SliderFloat("Gamma",             &config.features.gamma, 0.1f, 3.0f, "%.1f");
+        ImGui::DragFloat("Exposure",            &config.features.exposure, 0.0001f, 0.0005f, 1.5f, "%.4f");
     }
 }

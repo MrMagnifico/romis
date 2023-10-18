@@ -45,18 +45,14 @@ void Reservoir::combineUnbiased(const std::span<Reservoir>& reservoirStream, Res
     }
     finalReservoir.numSamples = totalSampleCount;
 
-    size_t contributingSampleCount = 1ULL; // Avoid division by zero
-    for (const Reservoir& reservoir : reservoirStream) {
-        if (features.spatialReuseVisibilityCheck && !testVisibilityLightSample(finalReservoir.outputSample.position, bvh, features, reservoir.cameraRay, reservoir.hitInfo)) { continue; }
-        float finalSamplePdfAtPixel = targetPDF(finalReservoir.outputSample, reservoir.cameraRay, reservoir.hitInfo, features);
-        if (!zeroWithinEpsilon(finalSamplePdfAtPixel)) { contributingSampleCount += reservoir.numSamples; }
-    }
-
-    float finalPdfValue                 = targetPDF(finalReservoir.outputSample, finalReservoir.cameraRay, finalReservoir.hitInfo, features);
-    finalPdfValue                       = zeroWithinEpsilon(finalPdfValue) ? ZERO_EPSILON : finalPdfValue;
-    finalReservoir.outputWeight         = (1.0f / finalPdfValue) * 
-                                          (1.0f / contributingSampleCount) *
-                                          finalReservoir.wSum;
+    float finalPdfValue         = targetPDF(finalReservoir.outputSample, finalReservoir.cameraRay, finalReservoir.hitInfo, features);
+    float pdfSum                = std::numeric_limits<float>::min(); // Avoid division by zero
+    for (const Reservoir& reservoir : reservoirStream) { pdfSum += targetPDF(finalReservoir.outputSample, reservoir.cameraRay, reservoir.hitInfo, features); }
+    float misWeight             = finalPdfValue / pdfSum;
+    finalPdfValue               = zeroWithinEpsilon(finalPdfValue) ? ZERO_EPSILON : finalPdfValue;
+    finalReservoir.outputWeight = (1.0f / finalPdfValue) * 
+                                  misWeight *
+                                  finalReservoir.wSum;
 }
 
 float targetPDF(const LightSample& sample, const Ray& cameraRay, const HitInfo& hitInfo, const Features& features) {

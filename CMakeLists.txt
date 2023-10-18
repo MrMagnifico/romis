@@ -29,6 +29,7 @@ add_library(CGFinProjLib
 	"src/screen.cpp"
 	"src/shading.cpp"
 	"src/texture.cpp"
+	"src/tone_mapping.cpp"
 	"src/ui.cpp"
 	"src/utils.cpp"
 )

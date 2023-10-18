@@ -95,5 +95,10 @@ struct Features {
     uint32_t spatialResamplingPasses    = 2U;
     uint32_t spatialResampleRadius      = 30U;
 
+    // Misc parameters
+    bool enableToneMapping  = true;
+    float gamma             = 1.0f;
+    float exposure          = 1.5f;
+
     ExtraFeatures extra = {};
 };

@@ -2,6 +2,7 @@
 #include "intersect.h"
 #include "light.h"
 #include "screen.h"
+#include "tone_mapping.h"
 #include "utils.h"
 
 #include <framework/trackball.h>
@@ -101,7 +102,7 @@ void temporalReuse(ReservoirGrid& reservoirGrid, const ReservoirGrid& previousFr
             combined.cameraRay                              = current.cameraRay;
             combined.hitInfo                                = current.hitInfo;
             std::array<Reservoir, 2ULL> pixelAndPredecessor = { current, temporalPredecessor };
-            Reservoir::combineBiased(pixelAndPredecessor, combined, features);
+            Reservoir::combineBiased(pixelAndPredecessor, combined, features); // Temporal predecessor should have visibility, so no need to account for bias
             reservoirGrid[y][x]                             = combined;
         }
     }
@@ -122,11 +123,15 @@ ReservoirGrid renderRayTracing(std::shared_ptr<const ReservoirGrid> previousFram
     #endif
     for (int y = 0; y < windowResolution.y; y++) {
         for (int x = 0; x != windowResolution.x; x++) {
+            // Compute shading from final sample
             const Reservoir& reservoir  = reservoirGrid[y][x];
             glm::vec3 finalColor        = testVisibilityLightSample(reservoir.outputSample.position, bvh, features, reservoir.cameraRay, reservoir.hitInfo)                 ?
                                           computeShading(reservoir.outputSample.position, reservoir.outputSample.color, features, reservoir.cameraRay, reservoir.hitInfo)   :
                                           glm::vec3(0.0f);
             finalColor                  *= reservoir.outputWeight;
+
+            // Apply tone mapping and set final pixel color
+            if (features.enableToneMapping) { finalColor = exposureToneMapping(finalColor, features); }
             screen.setPixel(x, y, finalColor);
         }
     }
