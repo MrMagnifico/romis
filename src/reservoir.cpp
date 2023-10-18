@@ -27,12 +27,12 @@ void Reservoir::combineBiased(const std::span<Reservoir>& reservoirStream, Reser
         finalReservoir.update(reservoir.outputSample, pdfValue * reservoir.outputWeight * reservoir.numSamples);
     }
 
-    float finalPdfValue         = targetPDF(finalReservoir.outputSample, finalReservoir.cameraRay, finalReservoir.hitInfo, features);
-    finalPdfValue               = zeroWithinEpsilon(finalPdfValue) ? ZERO_EPSILON : finalPdfValue;
     finalReservoir.numSamples   = totalSampleCount;
-    finalReservoir.outputWeight = (1.0f / finalPdfValue) * 
-                                  (1.0f / finalReservoir.numSamples) *
-                                  finalReservoir.wSum;
+    float finalPdfValue         = targetPDF(finalReservoir.outputSample, finalReservoir.cameraRay, finalReservoir.hitInfo, features);
+    if (finalPdfValue == 0.0f)  { finalReservoir.outputWeight = 0.0f; }
+    else                        { finalReservoir.outputWeight = (1.0f / finalPdfValue) * 
+                                                                (1.0f / finalReservoir.numSamples) *
+                                                                finalReservoir.wSum; }
 }
 
 void Reservoir::combineUnbiased(const std::span<Reservoir>& reservoirStream, Reservoir& finalReservoir, const BvhInterface& bvh, const Features& features) {
@@ -50,11 +50,11 @@ void Reservoir::combineUnbiased(const std::span<Reservoir>& reservoirStream, Res
         if (pdfValue > 0.0f) { validSamples += reservoir.numSamples; }
     }
     
-    float finalPdfValue         = targetPDF(finalReservoir.outputSample, finalReservoir.cameraRay, finalReservoir.hitInfo, features);
-    finalPdfValue               = zeroWithinEpsilon(finalPdfValue) ? ZERO_EPSILON : finalPdfValue;
-    finalReservoir.outputWeight = (1.0f / finalPdfValue) * 
-                                  (1.0f / validSamples) *
-                                  finalReservoir.wSum;
+    float finalPdfValue = targetPDF(finalReservoir.outputSample, finalReservoir.cameraRay, finalReservoir.hitInfo, features);
+    if (finalPdfValue == 0.0f)  { finalReservoir.outputWeight = 0.0f; }
+    else                        { finalReservoir.outputWeight = (1.0f / finalPdfValue) * 
+                                                                (1.0f / validSamples) *
+                                                                finalReservoir.wSum; }
 }
 
 float targetPDF(const LightSample& sample, const Ray& cameraRay, const HitInfo& hitInfo, const Features& features) {

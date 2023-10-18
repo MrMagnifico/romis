@@ -84,12 +84,14 @@ Reservoir genCanonicalSamples(const Scene& scene, const BvhInterface& bvh, const
     }
 
     // Set output weight and do optional visibility check
-    float pdfValue          = targetPDF(reservoir.outputSample, reservoir.cameraRay, reservoir.hitInfo, features);
-    pdfValue                = zeroWithinEpsilon(pdfValue) ? ZERO_EPSILON : pdfValue;
-    reservoir.outputWeight  = (1.0f / pdfValue) * 
-                              (1.0f / reservoir.numSamples) *
-                              reservoir.wSum;
     if (features.initialSamplesVisibilityCheck && !testVisibilityLightSample(reservoir.outputSample.position, bvh, features, ray, reservoir.hitInfo)) { reservoir.outputWeight = 0.0f; }
+    else {
+        float pdfValue = targetPDF(reservoir.outputSample, reservoir.cameraRay, reservoir.hitInfo, features);
+        if (pdfValue == 0.0f)   { reservoir.outputWeight    = 0.0f; }
+        else                    { reservoir.outputWeight    = (1.0f / pdfValue) * 
+                                                              (1.0f / reservoir.numSamples) *
+                                                              reservoir.wSum; }
+    }
     
     // Draw debug ray and return
     drawRay(reservoir.cameraRay, CAMERA_RAY_HIT_COLOR);
