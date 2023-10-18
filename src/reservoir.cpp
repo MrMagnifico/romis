@@ -20,7 +20,7 @@ void Reservoir::update(LightSample sample, float weight) {
     }
 }
 
-void Reservoir::combine(const std::span<Reservoir>& reservoirStream, Reservoir& finalReservoir, const Features& features) {
+void Reservoir::combineBiased(const std::span<Reservoir>& reservoirStream, Reservoir& finalReservoir, const Features& features) {
     size_t totalSampleCount = 0ULL;
     for (const Reservoir& reservoir : reservoirStream) {
         float pdfValue      = targetPDF(reservoir.outputSample, finalReservoir.cameraRay, finalReservoir.hitInfo, features);
@@ -34,6 +34,29 @@ void Reservoir::combine(const std::span<Reservoir>& reservoirStream, Reservoir& 
     finalReservoir.outputWeight = (1.0f / finalPdfValue) * 
                                   (1.0f / finalReservoir.numSamples) *
                                   finalReservoir.wSum;
+}
+
+void Reservoir::combineUnbiased(const std::span<Reservoir>& reservoirStream, Reservoir& finalReservoir, const BvhInterface& bvh, const Features& features) {
+    size_t totalSampleCount = 0ULL;
+    for (const Reservoir& reservoir : reservoirStream) {
+        float pdfValue      = targetPDF(reservoir.outputSample, finalReservoir.cameraRay, finalReservoir.hitInfo, features);
+        totalSampleCount    += reservoir.numSamples;
+        finalReservoir.update(reservoir.outputSample, pdfValue * reservoir.outputWeight * reservoir.numSamples);
+    }
+    finalReservoir.numSamples = totalSampleCount;
+
+    size_t contributingSampleCount = 1ULL; // Avoid division by zero
+    for (const Reservoir& reservoir : reservoirStream) {
+        if (features.spatialReuseVisibilityCheck && !testVisibilityLightSample(finalReservoir.outputSample.position, bvh, features, reservoir.cameraRay, reservoir.hitInfo)) { continue; }
+        float finalSamplePdfAtPixel = targetPDF(finalReservoir.outputSample, reservoir.cameraRay, reservoir.hitInfo, features);
+        if (!zeroWithinEpsilon(finalSamplePdfAtPixel)) { contributingSampleCount += reservoir.numSamples; }
+    }
+
+    float finalPdfValue                 = targetPDF(finalReservoir.outputSample, finalReservoir.cameraRay, finalReservoir.hitInfo, features);
+    finalPdfValue                       = zeroWithinEpsilon(finalPdfValue) ? ZERO_EPSILON : finalPdfValue;
+    finalReservoir.outputWeight         = (1.0f / finalPdfValue) * 
+                                          (1.0f / contributingSampleCount) *
+                                          finalReservoir.wSum;
 }
 
 float targetPDF(const LightSample& sample, const Ray& cameraRay, const HitInfo& hitInfo, const Features& features) {

@@ -2,6 +2,8 @@
 #include "intersect.h"
 #include "light.h"
 #include "screen.h"
+#include "utils.h"
+
 #include <framework/trackball.h>
 
 #ifdef NDEBUG
@@ -54,24 +56,25 @@ void spatialReuse(ReservoirGrid& reservoirGrid, const BvhInterface& bvh, const S
                     int neighbourY              = std::clamp(y + distr(gen), 0, windowResolution.y - 1);
                     Reservoir neighbour         = prevIteration[neighbourY][neighbourX]; // Create copy for local modification
                     
-                    // Conduct heuristic check if biased, visibility check if unbiased
-                    if (!features.spatialReuseVisibilityCheck) { 
+                    // Conduct heuristic check if biased combination is used
+                    if (!features.spatialReuseUnbiased) { 
                         float depthFracDiff     = std::abs(1.0f - (neighbour.cameraRay.t / current.cameraRay.t));   // Check depth difference (greater than 10% leads to rejection) 
                         float normalsDotProd    = glm::dot(neighbour.hitInfo.normal, current.hitInfo.normal);       // Check normal difference (greater than 25 degrees leads to rejection)
                         if (depthFracDiff > 0.1f || normalsDotProd < 0.90630778703f) { continue; } 
-                    } else if (!testVisibilityLightSample(neighbour.outputSample.position, bvh, features, current.cameraRay, current.hitInfo)) { continue; } // Visibility testing
+                    }
                     
                     selected.push_back(neighbour);
                 }
-                
+
                 // Ensure pixel's own reservoir is also considered
                 selected.push_back(current);
 
-                // Combine to single reservoir
+                // Combine to single reservoir (biased or unbiased depending on user selection)
                 Reservoir combined;
                 combined.cameraRay  = current.cameraRay;
                 combined.hitInfo    = current.hitInfo;
-                Reservoir::combine(selected, combined, features);
+                if (features.spatialReuseUnbiased)  { Reservoir::combineUnbiased(selected, combined, bvh, features); }
+                else                                { Reservoir::combineBiased(selected, combined, features); }
                 reservoirGrid[y][x] = combined;
             }
         }
@@ -98,7 +101,7 @@ void temporalReuse(ReservoirGrid& reservoirGrid, const ReservoirGrid& previousFr
             combined.cameraRay                              = current.cameraRay;
             combined.hitInfo                                = current.hitInfo;
             std::array<Reservoir, 2ULL> pixelAndPredecessor = { current, temporalPredecessor };
-            Reservoir::combine(pixelAndPredecessor, combined, features);
+            Reservoir::combineBiased(pixelAndPredecessor, combined, features);
             reservoirGrid[y][x]                             = combined;
         }
     }

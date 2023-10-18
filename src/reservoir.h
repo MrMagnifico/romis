@@ -2,6 +2,7 @@
 #ifndef _RESERVOIR_H_
 #define _RESERVOIR_H_
 
+#include "bvh_interface.h"
 #include "common.h"
 
 #include <framework/disable_all_warnings.h>
@@ -33,13 +34,22 @@ struct Reservoir {
     void update(LightSample sample, float weight);
 
     /**
-     * Combine a number of reservoirs in a single final reservoir
+     * Combine a number of reservoirs in a single final reservoir in a biased fashion (Algorithm 5 in ReSTIR paper)
      * 
      * @param reservoirs The reservoirs to be combined
      * @param finalReservoir Struct where final combined reservoir data will be stored. Should have the intersection position info of the relevant pixel
      * @param features Features configuration
     */
-    static void combine(const std::span<Reservoir>& reservoirStream, Reservoir& finalReservoir, const Features& features);
+    static void combineBiased(const std::span<Reservoir>& reservoirStream, Reservoir& finalReservoir, const Features& features);
+
+    /**
+     * Combine a number of reservoirs in a single final reservoir in an unbiased fashion (Algorithm 6 in ReSTIR paper)
+     * 
+     * @param reservoirs The reservoirs to be combined
+     * @param finalReservoir Struct where final combined reservoir data will be stored. Should have the intersection position info of the relevant pixel
+     * @param features Features configuration
+    */
+    static void combineUnbiased(const std::span<Reservoir>& reservoirStream, Reservoir& finalReservoir, const BvhInterface& bvh, const Features& features);
 };
 
 using ReservoirGrid = std::vector<std::vector<Reservoir>>;

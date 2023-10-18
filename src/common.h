@@ -85,14 +85,15 @@ struct Features {
     // ReSTIR feature flags
     bool initialSamplesVisibilityCheck  = true;
     bool spatialReuse                   = false;
+    bool spatialReuseUnbiased           = false;
     bool spatialReuseVisibilityCheck    = false;
     bool temporalReuse                  = false;
 
     // ReSTIR parameters
     uint32_t initialLightSamples        = 32U;
-    uint32_t numNeighboursToSample      = 3U;
+    uint32_t numNeighboursToSample      = 5U;
     uint32_t spatialResamplingPasses    = 2U;
-    uint32_t spatialResampleRadius      = 15U;
+    uint32_t spatialResampleRadius      = 30U;
 
     ExtraFeatures extra = {};
 };

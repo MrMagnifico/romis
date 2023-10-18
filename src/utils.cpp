@@ -1,3 +1,4 @@
+#include "draw.h"
 #include "utils.h"
 #include "texture.h"
 
@@ -22,6 +23,26 @@ glm::vec3 diffuseAlbedo(const HitInfo& hitInfo, const Features& features) {
     return features.enableTextureMapping && hitInfo.material.kdTexture                   ?
            acquireTexel(*hitInfo.material.kdTexture.get(), hitInfo.texCoord, features)   :
            hitInfo.material.kd;
+}
+
+// test the visibility at a given light sample
+// returns true if sample is visible, false otherwise
+bool testVisibilityLightSample(const glm::vec3& samplePos, const BvhInterface& bvh, const Features& features, Ray ray, HitInfo hitInfo) {
+    // Construct shadow ray
+    glm::vec3 shadingPoint  = ray.origin + (ray.t * ray.direction);
+    glm::vec3 pointToSample = glm::normalize(samplePos - shadingPoint); 
+    shadingPoint            += pointToSample * SHADOW_RAY_EPSILON;      // Small epsilon in shadow ray direction to avoid self-shadowing
+    Ray shadowRay { shadingPoint, pointToSample, glm::distance(shadingPoint, samplePos) };
+
+    // Visibility test and debug rays
+    HitInfo shadowRayHit;
+    bool visible = !bvh.intersect(shadowRay, shadowRayHit, features);
+    if (visible) {
+        drawRay(shadowRay, SHADOW_RAY_NO_HIT_COLOR);
+        return true;
+    }
+    drawRay(shadowRay, SHADOW_RAY_INTERSECT_COLOR);
+    return false;
 }
 
 void setOpenGLMatrices(const Trackball& camera) {

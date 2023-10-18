@@ -276,10 +276,11 @@ void UiManager::drawLightControls() {
 
 void UiManager::drawRestirFeaturesToggles() {
     if (ImGui::CollapsingHeader("Features", ImGuiTreeNodeFlags_DefaultOpen)) {
-        ImGui::Checkbox("Initial samples visibility check", &config.features.initialSamplesVisibilityCheck);
-        ImGui::Checkbox("Spatial reuse",                    &config.features.spatialReuse);
-        ImGui::Checkbox("Spatial reuse visibility check",   &config.features.spatialReuseVisibilityCheck);
-        ImGui::Checkbox("Temporal reuse",                   &config.features.temporalReuse);
+        ImGui::Checkbox("Initial samples - Visibility check",       &config.features.initialSamplesVisibilityCheck);
+        ImGui::Checkbox("Spatial reuse",                            &config.features.spatialReuse);
+        ImGui::Checkbox("Spatial reuse - Use unbiased combination", &config.features.spatialReuseUnbiased);
+        ImGui::Checkbox("Spatial reuse - Visibility check",         &config.features.spatialReuseVisibilityCheck);
+        ImGui::Checkbox("Temporal reuse",                           &config.features.temporalReuse);
     }
 }
 
