@@ -10,6 +10,7 @@
 
 #include <array>
 #include <random>
+#include <vector>
 
 
 ReservoirGrid genInitialSamples(const Scene& scene, const Trackball& camera, const BvhInterface& bvh, Screen& screen, const Features& features) {
@@ -45,16 +46,26 @@ void spatialReuse(ReservoirGrid& reservoirGrid, const BvhInterface& bvh, const S
         for (int y = 0; y < windowResolution.y; y++) {
             for (int x = 0; x != windowResolution.x; x++) {
                 // Select candidates
+                std::vector<Reservoir> selected;
+                selected.reserve(features.numNeighboursToSample + 1U); // Reserve memory needed for maximum possible number of samples (neighbours + current)
                 Reservoir& current = reservoirGrid[y][x];
-                std::vector<Reservoir> selected(features.numNeighboursToSample + 1ULL);
                 for (uint32_t neighbourCount = 0U; neighbourCount < features.numNeighboursToSample; neighbourCount++) {
                     int neighbourX              = std::clamp(x + distr(gen), 0, windowResolution.x - 1);
                     int neighbourY              = std::clamp(y + distr(gen), 0, windowResolution.y - 1);
-                    Reservoir neighbour         = prevIteration[neighbourY][neighbourX]; // Create copy for local modification based on visiblity (if desired)
-                    if (features.spatialReuseVisibilityCheck && !testVisibilityLightSample(neighbour.outputSample.position, bvh, features, current.cameraRay, current.hitInfo)) { neighbour.outputWeight = 0.0f; }
-                    selected[neighbourCount]    = neighbour;
+                    Reservoir neighbour         = prevIteration[neighbourY][neighbourX]; // Create copy for local modification
+                    
+                    // Conduct heuristic check if biased, visibility check if unbiased
+                    if (!features.spatialReuseVisibilityCheck) { 
+                        float depthFracDiff     = std::abs(1.0f - (neighbour.cameraRay.t / current.cameraRay.t));   // Check depth difference (greater than 10% leads to rejection) 
+                        float normalsDotProd    = glm::dot(neighbour.hitInfo.normal, current.hitInfo.normal);       // Check normal difference (greater than 25 degrees leads to rejection)
+                        if (depthFracDiff > 0.1f || normalsDotProd < 0.90630778703f) { continue; } 
+                    } else if (!testVisibilityLightSample(neighbour.outputSample.position, bvh, features, current.cameraRay, current.hitInfo)) { continue; } // Visibility testing
+                    
+                    selected.push_back(neighbour);
                 }
-                selected[features.numNeighboursToSample] = current; // Ensure pixel's own reservoir is also considered
+                
+                // Ensure pixel's own reservoir is also considered
+                selected.push_back(current);
 
                 // Combine to single reservoir
                 Reservoir combined;
@@ -76,15 +87,11 @@ void temporalReuse(ReservoirGrid& reservoirGrid, const ReservoirGrid& previousFr
     #endif
     for (int y = 0; y < windowResolution.y; y++) {
         for (int x = 0; x != windowResolution.x; x++) {
-            // Compute previous corresponding pixels and skip temporal resampling if coordinates are out of bounds
-            glm::ivec2 prevPixelCoords(x - static_cast<int>(motionVector.x), y - static_cast<int>(motionVector.y));
-            if (prevPixelCoords.x < 0 || prevPixelCoords.x >= windowResolution.x ||
-                prevPixelCoords.y < 0 || prevPixelCoords.y >= windowResolution.y) { continue; }
-
             // Locally clamp M value to 20x current frame's M to bound temporal creep
+            // TODO: Add consideration of motion vectors
             Reservoir& current              = reservoirGrid[y][x];
-            Reservoir temporalPredecessor   = previousFrameGrid[prevPixelCoords.y][prevPixelCoords.x];
-            temporalPredecessor.numSamples  = std::clamp(temporalPredecessor.numSamples, 0ULL, 20ULL * current.numSamples);
+            Reservoir temporalPredecessor   = previousFrameGrid[y][x];
+            temporalPredecessor.numSamples  = std::min(temporalPredecessor.numSamples, 20ULL * current.numSamples);
 
             // Combine to single reservoir
             Reservoir combined;

@@ -25,7 +25,7 @@ void Reservoir::combine(const std::span<Reservoir>& reservoirStream, Reservoir& 
     for (const Reservoir& reservoir : reservoirStream) {
         float pdfValue      = targetPDF(reservoir.outputSample, finalReservoir.cameraRay, finalReservoir.hitInfo, features);
         totalSampleCount    += reservoir.numSamples;
-        finalReservoir.update(reservoir.outputSample, pdfValue * reservoir.outputWeight * reservoir.numSamples); // TODO: Issue is with output weight becoming NaN
+        finalReservoir.update(reservoir.outputSample, pdfValue * reservoir.outputWeight * reservoir.numSamples);
     }
 
     float finalPdfValue         = targetPDF(finalReservoir.outputSample, finalReservoir.cameraRay, finalReservoir.hitInfo, features);
