@@ -12,6 +12,7 @@
 #endif
 
 #include <array>
+#include <iostream>
 #include <random>
 #include <vector>
 
@@ -58,7 +59,7 @@ void spatialReuse(ReservoirGrid& reservoirGrid, const BvhInterface& bvh, const S
                     Reservoir neighbour         = prevIteration[neighbourY][neighbourX]; // Create copy for local modification
                     
                     // Conduct heuristic check if biased combination is used
-                    if (!features.spatialReuseUnbiased) { 
+                    if (!features.unbiasedCombination) { 
                         float depthFracDiff     = std::abs(1.0f - (neighbour.cameraRay.t / current.cameraRay.t));   // Check depth difference (greater than 10% leads to rejection) 
                         float normalsDotProd    = glm::dot(neighbour.hitInfo.normal, current.hitInfo.normal);       // Check normal difference (greater than 25 degrees leads to rejection)
                         if (depthFracDiff > 0.1f || normalsDotProd < 0.90630778703f) { continue; } 
@@ -74,7 +75,7 @@ void spatialReuse(ReservoirGrid& reservoirGrid, const BvhInterface& bvh, const S
                 Reservoir combined;
                 combined.cameraRay  = current.cameraRay;
                 combined.hitInfo    = current.hitInfo;
-                if (features.spatialReuseUnbiased)  { Reservoir::combineUnbiased(selected, combined, bvh, features); }
+                if (features.unbiasedCombination)   { Reservoir::combineUnbiased(selected, combined, bvh, features); }
                 else                                { Reservoir::combineBiased(selected, combined, features); }
                 reservoirGrid[y][x] = combined;
             }
@@ -83,7 +84,7 @@ void spatialReuse(ReservoirGrid& reservoirGrid, const BvhInterface& bvh, const S
     }
 }
 
-void temporalReuse(ReservoirGrid& reservoirGrid, const ReservoirGrid& previousFrameGrid,
+void temporalReuse(ReservoirGrid& reservoirGrid, ReservoirGrid& previousFrameGrid, const BvhInterface& bvh,
                    Screen& screen, const glm::vec2 motionVector, const Features& features) {
     glm::ivec2 windowResolution = screen.resolution();
     #ifdef NDEBUG
@@ -91,29 +92,33 @@ void temporalReuse(ReservoirGrid& reservoirGrid, const ReservoirGrid& previousFr
     #endif
     for (int y = 0; y < windowResolution.y; y++) {
         for (int x = 0; x != windowResolution.x; x++) {
-            // Locally clamp M value to 20x current frame's M to bound temporal creep
+            // Clamp M and wSum values to 20x current frame's to bound temporal creep
             // TODO: Add consideration of motion vectors
             Reservoir& current              = reservoirGrid[y][x];
-            Reservoir temporalPredecessor   = previousFrameGrid[y][x];
-            temporalPredecessor.numSamples  = std::min(temporalPredecessor.numSamples, 20ULL * current.numSamples);
+            Reservoir& temporalPredecessor  = previousFrameGrid[y][x];
+            size_t twentyCurrentM           = (20ULL * current.numSamples) + 1ULL;
+            if (temporalPredecessor.numSamples > twentyCurrentM) {
+                temporalPredecessor.wSum        *= twentyCurrentM / temporalPredecessor.numSamples;
+                temporalPredecessor.numSamples  = twentyCurrentM;
+            }
 
             // Combine to single reservoir
             Reservoir combined;
             combined.cameraRay                              = current.cameraRay;
             combined.hitInfo                                = current.hitInfo;
             std::array<Reservoir, 2ULL> pixelAndPredecessor = { current, temporalPredecessor };
-            Reservoir::combineBiased(pixelAndPredecessor, combined, features); // Temporal predecessor should have visibility, so no need to account for bias
+            Reservoir::combineBiased(pixelAndPredecessor, combined, features); // Samples from temporal predecessor should be visible, no need to do unbiased combination
             reservoirGrid[y][x]                             = combined;
         }
     }
 }
 
-ReservoirGrid renderRayTracing(std::shared_ptr<const ReservoirGrid> previousFrameGrid,
+ReservoirGrid renderRayTracing(std::shared_ptr<ReservoirGrid> previousFrameGrid,
                                const Scene& scene, const Trackball& camera,
                                const BvhInterface& bvh, Screen& screen,
                                const glm::vec2 motionVector, const Features& features) {
     ReservoirGrid reservoirGrid = genInitialSamples(scene, camera, bvh, screen, features);
-    if (features.temporalReuse && previousFrameGrid)    { temporalReuse(reservoirGrid, *previousFrameGrid.get(), screen, motionVector, features); }
+    if (features.temporalReuse && previousFrameGrid)    { temporalReuse(reservoirGrid, *previousFrameGrid.get(), bvh, screen, motionVector, features); }
     if (features.spatialReuse)                          { spatialReuse(reservoirGrid, bvh, screen, features); }
 
     // Final shading

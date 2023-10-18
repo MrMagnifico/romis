@@ -59,7 +59,7 @@ int main(int argc, char** argv) {
         std::optional<Ray> optDebugRay;
         Scene scene         = loadScenePrebuilt(sceneType, config.dataPath);
         BvhInterface bvh(&scene);
-        std::shared_ptr<const ReservoirGrid> previousFrameGrid;
+        std::shared_ptr<ReservoirGrid> previousFrameGrid;
 
         int bvhDebugLevel       = 0;
         int bvhDebugLeaf        = 0;
@@ -160,7 +160,7 @@ int main(int argc, char** argv) {
                 } break;
                 case ViewMode::RayTracing: {
                     screen.clear(glm::vec3(0.0f));
-                    previousFrameGrid = make_shared<const ReservoirGrid>(renderRayTracing(previousFrameGrid, scene, camera, bvh, screen, camera.getLastDelta(), config.features));
+                    previousFrameGrid = make_shared<ReservoirGrid>(renderRayTracing(previousFrameGrid, scene, camera, bvh, screen, camera.getLastDelta(), config.features));
                     screen.setPixel(0, 0, glm::vec3(1.0f));
                     screen.draw(); // Takes the image generated using ray tracing and outputs it to the screen using OpenGL.
                 } break;
@@ -197,7 +197,7 @@ int main(int argc, char** argv) {
             config.scene);
 
         BvhInterface bvh { &scene };
-        std::shared_ptr<const ReservoirGrid> previousFrameGrid;
+        std::shared_ptr<ReservoirGrid> previousFrameGrid;
 
         // Create output directory if it does not exist.
         if (!std::filesystem::exists(config.outputDir)) { std::filesystem::create_directories(config.outputDir); }
@@ -213,7 +213,7 @@ int main(int argc, char** argv) {
                 screen.clear(glm::vec3(0.0f));
                 Trackball camera { &window, glm::radians(cameraConfig.fieldOfView), cameraConfig.distanceFromLookAt };
                 camera.setCamera(cameraConfig.lookAt, glm::radians(cameraConfig.rotation), cameraConfig.distanceFromLookAt);
-                previousFrameGrid           = make_shared<const ReservoirGrid>(renderRayTracing(previousFrameGrid, scene, camera, bvh, screen, camera.getLastDelta(), config.features));
+                previousFrameGrid           = make_shared<ReservoirGrid>(renderRayTracing(previousFrameGrid, scene, camera, bvh, screen, camera.getLastDelta(), config.features));
                 const auto filename_base    = fmt::format("{}_{}_cam_{}", sceneName, start_time_string, index);
                 const auto filepath         = config.outputDir / (filename_base + ".bmp");
                 fmt::print("Image {} saved to {}\n", index, filepath.string());

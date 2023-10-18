@@ -84,8 +84,8 @@ struct Features {
 
     // ReSTIR feature flags
     bool initialSamplesVisibilityCheck  = true;
+    bool unbiasedCombination            = false;
     bool spatialReuse                   = false;
-    bool spatialReuseUnbiased           = false;
     bool spatialReuseVisibilityCheck    = false;
     bool temporalReuse                  = false;
 

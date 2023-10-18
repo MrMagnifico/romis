@@ -15,7 +15,7 @@
 class UiManager {
 public:
     UiManager(BvhInterface& bvh, Trackball& camera, Config& config, std::optional<Ray>& optDebugRay,
-              std::shared_ptr<const ReservoirGrid>& previousFrameGrid, Scene& scene, SceneType& sceneType,
+              std::shared_ptr<ReservoirGrid>& previousFrameGrid, Scene& scene, SceneType& sceneType,
               Screen& screen, ViewMode& viewMode, Window& window,
               int& bvhDebugLevel, int& bvhDebugLeaf, bool& debugBVHLevel, bool& debugBVHLeaf, int& selectedLightIdx);
 
@@ -27,7 +27,7 @@ private:
     Trackball& camera;
     Config& config;
     std::optional<Ray>& optDebugRay;
-    std::shared_ptr<const ReservoirGrid>& previousFrameGrid;
+    std::shared_ptr<ReservoirGrid>& previousFrameGrid;
     Scene& scene;
     SceneType& sceneType;
     Screen& screen;

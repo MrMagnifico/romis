@@ -19,7 +19,7 @@ DISABLE_WARNINGS_POP()
 
 
 UiManager::UiManager(BvhInterface& bvh, Trackball& camera, Config& config, std::optional<Ray>& optDebugRay,
-                     std::shared_ptr<const ReservoirGrid>& previousFrameGrid, Scene& scene, SceneType& sceneType,
+                     std::shared_ptr<ReservoirGrid>& previousFrameGrid, Scene& scene, SceneType& sceneType,
                      Screen& screen, ViewMode& viewMode, Window& window,
                      int& bvhDebugLevel, int& bvhDebugLeaf, bool& debugBVHLevel, bool& debugBVHLeaf, int& selectedLightIdx)
     : bvh(bvh)
@@ -171,7 +171,7 @@ void UiManager::drawRenderToFile() {
             // Perform a new render and measure the time it took to generate the image.
             using clock         = std::chrono::high_resolution_clock;
             const auto start    = clock::now();
-            previousFrameGrid   = std::make_shared<const ReservoirGrid>(renderRayTracing(previousFrameGrid, scene, camera, bvh, screen, camera.getLastDelta(), config.features));
+            previousFrameGrid   = std::make_shared<ReservoirGrid>(renderRayTracing(previousFrameGrid, scene, camera, bvh, screen, camera.getLastDelta(), config.features));
             const auto end      = clock::now();
             std::cout << "Time to render image: " << std::chrono::duration<float, std::milli>(end - start).count() << " milliseconds" << std::endl;
             
@@ -284,11 +284,11 @@ void UiManager::drawLightControls() {
 
 void UiManager::drawRestirFeaturesToggles() {
     if (ImGui::CollapsingHeader("Features", ImGuiTreeNodeFlags_DefaultOpen)) {
-        ImGui::Checkbox("Initial samples - Visibility check",       &config.features.initialSamplesVisibilityCheck);
-        ImGui::Checkbox("Spatial reuse",                            &config.features.spatialReuse);
-        ImGui::Checkbox("Spatial reuse - Use unbiased combination", &config.features.spatialReuseUnbiased);
-        ImGui::Checkbox("Spatial reuse - Visibility check",         &config.features.spatialReuseVisibilityCheck);
-        ImGui::Checkbox("Temporal reuse",                           &config.features.temporalReuse);
+        ImGui::Checkbox("Initial samples - Visibility check",   &config.features.initialSamplesVisibilityCheck);
+        ImGui::Checkbox("Use unbiased combination",             &config.features.unbiasedCombination);
+        ImGui::Checkbox("Spatial reuse",                        &config.features.spatialReuse);
+        ImGui::Checkbox("Spatial reuse - Visibility check",     &config.features.spatialReuseVisibilityCheck);
+        ImGui::Checkbox("Temporal reuse",                       &config.features.temporalReuse);
     }
 }
 

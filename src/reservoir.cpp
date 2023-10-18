@@ -7,7 +7,6 @@ DISABLE_WARNINGS_PUSH()
 #include <glm/glm.hpp>
 DISABLE_WARNINGS_POP()
 #include <cstdlib>
-#include <iostream>
 
 
 void Reservoir::update(LightSample sample, float weight) {
@@ -45,13 +44,16 @@ void Reservoir::combineUnbiased(const std::span<Reservoir>& reservoirStream, Res
     }
     finalReservoir.numSamples = totalSampleCount;
 
+    size_t validSamples = 1ULL; // Avoid division by zero
+    for (const Reservoir& reservoir : reservoirStream) {
+        float pdfValue = targetPDF(finalReservoir.outputSample, reservoir.cameraRay, reservoir.hitInfo, features);
+        if (pdfValue > 0.0f) { validSamples += reservoir.numSamples; }
+    }
+    
     float finalPdfValue         = targetPDF(finalReservoir.outputSample, finalReservoir.cameraRay, finalReservoir.hitInfo, features);
-    float pdfSum                = std::numeric_limits<float>::min(); // Avoid division by zero
-    for (const Reservoir& reservoir : reservoirStream) { pdfSum += targetPDF(finalReservoir.outputSample, reservoir.cameraRay, reservoir.hitInfo, features); }
-    float misWeight             = finalPdfValue / pdfSum;
     finalPdfValue               = zeroWithinEpsilon(finalPdfValue) ? ZERO_EPSILON : finalPdfValue;
     finalReservoir.outputWeight = (1.0f / finalPdfValue) * 
-                                  misWeight *
+                                  (1.0f / validSamples) *
                                   finalReservoir.wSum;
 }
 

@@ -18,11 +18,11 @@ ReservoirGrid genInitialSamples(const Scene& scene, const Trackball& camera, con
 
 void spatialReuse(ReservoirGrid& reservoirGrid, const BvhInterface& bvh, const Screen& screen, const Features& features);
 
-void temporalReuse(ReservoirGrid& reservoirGrid, const ReservoirGrid& previousFrameGrid,
+void temporalReuse(ReservoirGrid& reservoirGrid, ReservoirGrid& previousFrameGrid, const BvhInterface& bvh,
                    Screen& screen, const glm::vec2 motionVector, const Features& features);
 
 // Main rendering function.
-ReservoirGrid renderRayTracing(std::shared_ptr<const ReservoirGrid> previousFrameGrid,
+ReservoirGrid renderRayTracing(std::shared_ptr<ReservoirGrid> previousFrameGrid,
                                const Scene& scene, const Trackball& camera,
                                const BvhInterface& bvh, Screen& screen,
                                const glm::vec2 motionVector, const Features& features);
