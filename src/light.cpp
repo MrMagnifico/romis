@@ -66,7 +66,7 @@ Reservoir genCanonicalSamples(const Scene& scene, const BvhInterface& bvh, const
     reservoir.cameraRay = ray;
     if (!intersectScene) {   
         drawRay(ray, CAMERA_RAY_NO_HIT_COLOR);  // Draw a red debug ray if the ray missed
-        return reservoir;                           // Not intersection with scene, so empty reservoir
+        return reservoir;                       // No intersection with scene, so empty reservoir
     }
 
     // Uniform selection of light sources
@@ -80,6 +80,7 @@ Reservoir genCanonicalSamples(const Scene& scene, const BvhInterface& bvh, const
     glm::vec3 diffuseColor          = diffuseAlbedo(reservoir.hitInfo, features);
 
     // Obtain initial light samples
+    reservoir.numSamples = 0ULL; // Zero out cautionary one sample for zero division avoidance
     for (uint32_t sampleIdx = 0U; sampleIdx < features.initialLightSamples; sampleIdx++) {
         // Generate sample
         LightSample sample;
@@ -102,9 +103,11 @@ Reservoir genCanonicalSamples(const Scene& scene, const BvhInterface& bvh, const
     }
 
     // Set output weight and do optional visibility check
-    reservoir.outputWeight = (1.0f / targetPDF(reservoir.outputSample, reservoir.cameraRay, reservoir.hitInfo, features)) * 
-                             (1.0f / reservoir.numSamples) *
-                             reservoir.wSum;
+    float pdfValue          = targetPDF(reservoir.outputSample, reservoir.cameraRay, reservoir.hitInfo, features);
+    pdfValue                = zeroWithinEpsilon(pdfValue) ? ZERO_EPSILON : pdfValue;
+    reservoir.outputWeight  = (1.0f / pdfValue) * 
+                              (1.0f / reservoir.numSamples) *
+                              reservoir.wSum;
     if (features.initialSamplesVisibilityCheck && !testVisibilityLightSample(reservoir.outputSample.position, bvh, features, ray, reservoir.hitInfo)) { reservoir.outputWeight = 0.0f; }
     
     // Draw debug ray and return

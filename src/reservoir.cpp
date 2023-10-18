@@ -7,6 +7,7 @@ DISABLE_WARNINGS_PUSH()
 #include <glm/glm.hpp>
 DISABLE_WARNINGS_POP()
 #include <cstdlib>
+#include <iostream>
 
 
 void Reservoir::update(LightSample sample, float weight) {
@@ -24,10 +25,13 @@ void Reservoir::combine(const std::span<Reservoir>& reservoirStream, Reservoir& 
     for (const Reservoir& reservoir : reservoirStream) {
         float pdfValue      = targetPDF(reservoir.outputSample, finalReservoir.cameraRay, finalReservoir.hitInfo, features);
         totalSampleCount    += reservoir.numSamples;
-        finalReservoir.update(reservoir.outputSample, pdfValue * reservoir.outputWeight * reservoir.numSamples);
+        finalReservoir.update(reservoir.outputSample, pdfValue * reservoir.outputWeight * reservoir.numSamples); // TODO: Issue is with output weight becoming NaN
     }
+
+    float finalPdfValue         = targetPDF(finalReservoir.outputSample, finalReservoir.cameraRay, finalReservoir.hitInfo, features);
+    finalPdfValue               = zeroWithinEpsilon(finalPdfValue) ? ZERO_EPSILON : finalPdfValue;
     finalReservoir.numSamples   = totalSampleCount;
-    finalReservoir.outputWeight = (1.0f / targetPDF(finalReservoir.outputSample, finalReservoir.cameraRay, finalReservoir.hitInfo, features)) * 
+    finalReservoir.outputWeight = (1.0f / finalPdfValue) * 
                                   (1.0f / finalReservoir.numSamples) *
                                   finalReservoir.wSum;
 }
