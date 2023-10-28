@@ -92,14 +92,14 @@ void temporalReuse(ReservoirGrid& reservoirGrid, ReservoirGrid& previousFrameGri
     #endif
     for (int y = 0; y < windowResolution.y; y++) {
         for (int x = 0; x != windowResolution.x; x++) {
-            // Clamp M and wSum values to 20x current frame's to bound temporal creep
+            // Clamp M and wSum values to a user-defined multiple of the current frame's to bound temporal creep
             // TODO: Add consideration of motion vectors
             Reservoir& current              = reservoirGrid[y][x];
             Reservoir& temporalPredecessor  = previousFrameGrid[y][x];
-            size_t twentyCurrentM           = (20ULL * current.numSamples) + 1ULL;
-            if (temporalPredecessor.numSamples > twentyCurrentM) {
-                temporalPredecessor.wSum        *= twentyCurrentM / temporalPredecessor.numSamples;
-                temporalPredecessor.numSamples  = twentyCurrentM;
+            size_t multipleCurrentM         = (features.temporalClampM * current.numSamples) + 1ULL;
+            if (temporalPredecessor.numSamples > multipleCurrentM) {
+                temporalPredecessor.wSum        *= multipleCurrentM / temporalPredecessor.numSamples;
+                temporalPredecessor.numSamples  = multipleCurrentM;
             }
 
             // Combine to single reservoir

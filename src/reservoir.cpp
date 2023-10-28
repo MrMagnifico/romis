@@ -6,7 +6,6 @@
 DISABLE_WARNINGS_PUSH()
 #include <glm/glm.hpp>
 DISABLE_WARNINGS_POP()
-#include <cstdlib>
 
 
 void Reservoir::update(LightSample sample, float weight) {

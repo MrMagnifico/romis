@@ -298,6 +298,7 @@ void UiManager::drawRestirParams() {
         ImGui::SliderInt("Neighbours to sample",        (int*) &config.features.numNeighboursToSample,      1, 10);
         ImGui::SliderInt("Spatial resampling passes",   (int*) &config.features.spatialResamplingPasses,    1, 5);
         ImGui::SliderInt("Spatial resample radius",     (int*) &config.features.spatialResampleRadius,      1, 30);
+        ImGui::SliderInt("Temporal M clamp",            (int*) &config.features.temporalClampM,             1, 40);
     }
 }
 

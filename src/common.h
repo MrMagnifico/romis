@@ -94,6 +94,7 @@ struct Features {
     uint32_t numNeighboursToSample      = 5U;
     uint32_t spatialResamplingPasses    = 2U;
     uint32_t spatialResampleRadius      = 30U;
+    uint32_t temporalClampM             = 20U;
 
     // Misc parameters
     bool enableToneMapping  = true;
