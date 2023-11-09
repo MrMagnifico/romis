@@ -20,16 +20,22 @@ struct LightSample {
               color     = {0.0f, 0.0f, 0.0f};
 };
 
+struct SampleData {
+    LightSample lightSample;
+    float outputWeight  = 0.0f;
+    float wSum          = std::numeric_limits<float>::min();    // Avoid division by zero issues
+};
+
 struct Reservoir {
+    Reservoir(size_t numSamples) : outputSamples(numSamples) {}
+
     // Intersection position info
     Ray cameraRay;
     HitInfo hitInfo;
 
     // Light sampling
-    LightSample outputSample;
-    float outputWeight  = 0.0f;
-    float wSum          = std::numeric_limits<float>::min();    // Avoid division by zero issues
-    size_t numSamples   = 1ULL;                                 // Avoid division by zero issues
+    std::vector<SampleData> outputSamples;   
+    size_t numSamples   = 1ULL;             // Avoid division by zero issues
 
     void update(LightSample sample, float weight);
 

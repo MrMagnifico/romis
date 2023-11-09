@@ -37,7 +37,7 @@ void sampleParallelogramLight(const ParallelogramLight& parallelogramLight, glm:
 // in this method you should cycle the light sources and for each one compute their contribution
 // don't forget to check for visibility (shadows!)
 Reservoir genCanonicalSamples(const Scene& scene, const BvhInterface& bvh, const Features& features, Ray ray) {
-    Reservoir reservoir;
+    Reservoir reservoir(features.numSamplesInReservoir);
     
     // No lights to sample, just return
     if (scene.lights.size() == 0UL) { return reservoir; }
@@ -84,13 +84,15 @@ Reservoir genCanonicalSamples(const Scene& scene, const BvhInterface& bvh, const
     }
 
     // Set output weight and do optional visibility check
-    if (features.initialSamplesVisibilityCheck && !testVisibilityLightSample(reservoir.outputSample.position, bvh, features, ray, reservoir.hitInfo)) { reservoir.outputWeight = 0.0f; }
-    else {
-        float pdfValue = targetPDF(reservoir.outputSample, reservoir.cameraRay, reservoir.hitInfo, features);
-        if (pdfValue == 0.0f)   { reservoir.outputWeight    = 0.0f; }
-        else                    { reservoir.outputWeight    = (1.0f / pdfValue) * 
-                                                              (1.0f / reservoir.numSamples) *
-                                                              reservoir.wSum; }
+    for (SampleData& reservoirSample : reservoir.outputSamples) {
+        if (features.initialSamplesVisibilityCheck && !testVisibilityLightSample(reservoirSample.lightSample.position, bvh, features, ray, reservoir.hitInfo)) { reservoirSample.outputWeight = 0.0f; }
+        else {
+            float pdfValue = targetPDF(reservoirSample.lightSample, reservoir.cameraRay, reservoir.hitInfo, features);
+            if (pdfValue == 0.0f)   { reservoirSample.outputWeight  = 0.0f; }
+            else                    { reservoirSample.outputWeight  = (1.0f / pdfValue) * 
+                                                                      (1.0f / reservoir.numSamples) *
+                                                                      reservoirSample.wSum; }
+        }
     }
     
     // Draw debug ray and return

@@ -19,7 +19,7 @@
 
 ReservoirGrid genInitialSamples(const Scene& scene, const Trackball& camera, const BvhInterface& bvh, Screen& screen, const Features& features) {
     glm::ivec2 windowResolution = screen.resolution();
-    ReservoirGrid initialSamples(windowResolution.y, std::vector<Reservoir>(windowResolution.x));
+    ReservoirGrid initialSamples(windowResolution.y, std::vector<Reservoir>(windowResolution.x, Reservoir(features.numSamplesInReservoir)));
 
     #ifdef NDEBUG
     #pragma omp parallel for schedule(guided)
@@ -72,7 +72,7 @@ void spatialReuse(ReservoirGrid& reservoirGrid, const BvhInterface& bvh, const S
                 selected.push_back(current);
 
                 // Combine to single reservoir (biased or unbiased depending on user selection)
-                Reservoir combined;
+                Reservoir combined(current.outputSamples.size());
                 combined.cameraRay  = current.cameraRay;
                 combined.hitInfo    = current.hitInfo;
                 if (features.unbiasedCombination)   { Reservoir::combineUnbiased(selected, combined, bvh, features); }
@@ -98,12 +98,12 @@ void temporalReuse(ReservoirGrid& reservoirGrid, ReservoirGrid& previousFrameGri
             Reservoir& temporalPredecessor  = previousFrameGrid[y][x];
             size_t multipleCurrentM         = (features.temporalClampM * current.numSamples) + 1ULL;
             if (temporalPredecessor.numSamples > multipleCurrentM) {
-                temporalPredecessor.wSum        *= multipleCurrentM / temporalPredecessor.numSamples;
+                for (SampleData& predecessorSample : temporalPredecessor.outputSamples) { predecessorSample.wSum *= multipleCurrentM / temporalPredecessor.numSamples; }
                 temporalPredecessor.numSamples  = multipleCurrentM;
             }
 
             // Combine to single reservoir
-            Reservoir combined;
+            Reservoir combined(current.outputSamples.size());
             combined.cameraRay                              = current.cameraRay;
             combined.hitInfo                                = current.hitInfo;
             std::array<Reservoir, 2ULL> pixelAndPredecessor = { current, temporalPredecessor };
@@ -128,12 +128,17 @@ ReservoirGrid renderRayTracing(std::shared_ptr<ReservoirGrid> previousFrameGrid,
     #endif
     for (int y = 0; y < windowResolution.y; y++) {
         for (int x = 0; x != windowResolution.x; x++) {
-            // Compute shading from final sample
-            const Reservoir& reservoir  = reservoirGrid[y][x];
-            glm::vec3 finalColor        = testVisibilityLightSample(reservoir.outputSample.position, bvh, features, reservoir.cameraRay, reservoir.hitInfo)                 ?
-                                          computeShading(reservoir.outputSample.position, reservoir.outputSample.color, features, reservoir.cameraRay, reservoir.hitInfo)   :
+            // Compute shading from final sample(s)
+            glm::vec3 finalColor(0.0f);
+            const Reservoir& reservoir = reservoirGrid[y][x];
+            for (const SampleData& sample : reservoir.outputSamples) {
+                glm::vec3 sampleColor   = testVisibilityLightSample(sample.lightSample.position, bvh, features, reservoir.cameraRay, reservoir.hitInfo)             ?
+                                          computeShading(sample.lightSample.position, sample.lightSample.color, features, reservoir.cameraRay, reservoir.hitInfo)   :
                                           glm::vec3(0.0f);
-            finalColor                  *= reservoir.outputWeight;
+                sampleColor             *= sample.outputWeight;
+                finalColor              += sampleColor;
+            }
+            finalColor /= reservoir.outputSamples.size(); // Divide final shading value by number of samples
 
             // Apply tone mapping and set final pixel color
             if (features.enableToneMapping) { finalColor = exposureToneMapping(finalColor, features); }
