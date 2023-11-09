@@ -11,7 +11,7 @@ DISABLE_WARNINGS_POP()
 void Reservoir::update(LightSample sample, float weight) {
     numSamples += 1ULL;
     for (SampleData& outputSample : outputSamples) {
-        outputSample.wSum += weight;
+        outputSample.wSum   += weight;
         float uniformRandom = linearMap(static_cast<float>(rand()), 0.0f, RAND_MAX, 0.0f, 1.0f);
         if (uniformRandom < (weight / outputSample.wSum)) { 
             outputSample.lightSample.position   = sample.position;
@@ -23,16 +23,16 @@ void Reservoir::update(LightSample sample, float weight) {
 void Reservoir::combineBiased(const std::span<Reservoir>& reservoirStream, Reservoir& finalReservoir, const Features& features) {
     size_t totalSampleCount = 0ULL;
     for (const Reservoir& reservoir : reservoirStream) {
-        totalSampleCount    += reservoir.numSamples;
+        totalSampleCount += reservoir.numSamples * reservoir.outputSamples.size();
         for (const SampleData& reservoirSample : reservoir.outputSamples) {
-            float pdfValue      = targetPDF(reservoirSample.lightSample, finalReservoir.cameraRay, finalReservoir.hitInfo, features);
+            float pdfValue = targetPDF(reservoirSample.lightSample, finalReservoir.cameraRay, finalReservoir.hitInfo, features);
             finalReservoir.update(reservoirSample.lightSample, pdfValue * reservoirSample.outputWeight * reservoir.numSamples);
         }
     }
 
-    finalReservoir.numSamples   = totalSampleCount;
+    finalReservoir.numSamples = totalSampleCount;
     for (SampleData& finalReservoirSample : finalReservoir.outputSamples) {
-        float finalPdfValue         = targetPDF(finalReservoirSample.lightSample, finalReservoir.cameraRay, finalReservoir.hitInfo, features);
+        float finalPdfValue = targetPDF(finalReservoirSample.lightSample, finalReservoir.cameraRay, finalReservoir.hitInfo, features);
         if (finalPdfValue == 0.0f)  { finalReservoirSample.outputWeight = 0.0f; }
         else                        { finalReservoirSample.outputWeight = (1.0f / finalPdfValue) * 
                                                                           (1.0f / finalReservoir.numSamples) *
@@ -43,7 +43,7 @@ void Reservoir::combineBiased(const std::span<Reservoir>& reservoirStream, Reser
 void Reservoir::combineUnbiased(const std::span<Reservoir>& reservoirStream, Reservoir& finalReservoir, const BvhInterface& bvh, const Features& features) {
     size_t totalSampleCount = 0ULL;
     for (const Reservoir& reservoir : reservoirStream) {
-        totalSampleCount    += reservoir.numSamples;
+        totalSampleCount    += reservoir.numSamples * reservoir.outputSamples.size();
         for (const SampleData& reservoirSample : reservoir.outputSamples) {
             float pdfValue      = targetPDF(reservoirSample.lightSample, finalReservoir.cameraRay, finalReservoir.hitInfo, features);
             finalReservoir.update(reservoirSample.lightSample, pdfValue * reservoirSample.outputWeight * reservoir.numSamples);
@@ -57,7 +57,7 @@ void Reservoir::combineUnbiased(const std::span<Reservoir>& reservoirStream, Res
             const SampleData& finalReservoirSample  = finalReservoir.outputSamples[outputSampleIdx]; 
             float pdfValue                          = targetPDF(finalReservoirSample.lightSample, reservoir.cameraRay, reservoir.hitInfo, features);
             if (features.spatialReuseVisibilityCheck)   { pdfValue *= testVisibilityLightSample(finalReservoirSample.lightSample.position, bvh, features, reservoir.cameraRay, reservoir.hitInfo); }
-            if (pdfValue > 0.0f)                        { numValidSamples[outputSampleIdx] += reservoir.numSamples; }
+            if (pdfValue > 0.0f)                        { numValidSamples[outputSampleIdx] += reservoir.numSamples * reservoir.outputSamples.size(); }
         }
     }
     

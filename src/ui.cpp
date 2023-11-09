@@ -294,6 +294,7 @@ void UiManager::drawRestirFeaturesToggles() {
 
 void UiManager::drawRestirParams() {
     if (ImGui::CollapsingHeader("Parameters", ImGuiTreeNodeFlags_DefaultOpen)) {
+        ImGui::SliderInt("Samples per reservoir",       (int*) &config.features.numSamplesInReservoir,      1, 16);
         ImGui::SliderInt("Canonical sample count",      (int*) &config.features.initialLightSamples,        1, 128);
         ImGui::SliderInt("Neighbours to sample",        (int*) &config.features.numNeighboursToSample,      1, 10);
         ImGui::SliderInt("Spatial resampling passes",   (int*) &config.features.spatialResamplingPasses,    1, 5);
