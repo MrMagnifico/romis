@@ -91,7 +91,7 @@ Reservoir genCanonicalSamples(const Scene& scene, const BvhInterface& bvh, const
             if (pdfValue == 0.0f)   { reservoirSample.outputWeight  = 0.0f; }
             else                    { reservoirSample.outputWeight  = (1.0f / pdfValue) * 
                                                                       (1.0f / reservoir.numSamples) *
-                                                                      reservoirSample.wSum; }
+                                                                      reservoir.wSum; }
         }
     }
     

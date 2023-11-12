@@ -98,7 +98,7 @@ void temporalReuse(ReservoirGrid& reservoirGrid, ReservoirGrid& previousFrameGri
             Reservoir& temporalPredecessor  = previousFrameGrid[y][x];
             size_t multipleCurrentM         = (features.temporalClampM * current.numSamples) + 1ULL;
             if (temporalPredecessor.numSamples > multipleCurrentM) {
-                for (SampleData& predecessorSample : temporalPredecessor.outputSamples) { predecessorSample.wSum *= multipleCurrentM / temporalPredecessor.numSamples; }
+                temporalPredecessor.wSum        *= multipleCurrentM / temporalPredecessor.numSamples;
                 temporalPredecessor.numSamples  = multipleCurrentM;
             }
 

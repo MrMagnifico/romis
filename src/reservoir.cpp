@@ -9,11 +9,11 @@ DISABLE_WARNINGS_POP()
 
 
 void Reservoir::update(LightSample sample, float weight) {
-    numSamples += 1ULL;
+    numSamples  += 1ULL;
+    wSum        += weight;
     for (SampleData& outputSample : outputSamples) {
-        outputSample.wSum   += weight;
         float uniformRandom = linearMap(static_cast<float>(rand()), 0.0f, RAND_MAX, 0.0f, 1.0f);
-        if (uniformRandom < (weight / outputSample.wSum)) { 
+        if (uniformRandom < (weight / wSum)) { 
             outputSample.lightSample.position   = sample.position;
             outputSample.lightSample.color      = sample.color;
         }
@@ -36,7 +36,7 @@ void Reservoir::combineBiased(const std::span<Reservoir>& reservoirStream, Reser
         if (finalPdfValue == 0.0f)  { finalReservoirSample.outputWeight = 0.0f; }
         else                        { finalReservoirSample.outputWeight = (1.0f / finalPdfValue) * 
                                                                           (1.0f / finalReservoir.numSamples) *
-                                                                          finalReservoirSample.wSum; }
+                                                                          finalReservoir.wSum; }
     }
 }
 
@@ -67,7 +67,7 @@ void Reservoir::combineUnbiased(const std::span<Reservoir>& reservoirStream, Res
         if (finalPdfValue == 0.0f || numValidSamples[outputSampleIdx] == 0ULL)  { finalReservoirSample.outputWeight = 0.0f; }
         else                                                                    { finalReservoirSample.outputWeight = (1.0f / finalPdfValue) * 
                                                                                                                       (1.0f / numValidSamples[outputSampleIdx]) *
-                                                                                                                      finalReservoirSample.wSum; }
+                                                                                                                      finalReservoir.wSum; }
     }
 }
 

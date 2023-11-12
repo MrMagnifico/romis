@@ -22,8 +22,7 @@ struct LightSample {
 
 struct SampleData {
     LightSample lightSample;
-    float outputWeight  = 0.0f;
-    float wSum          = std::numeric_limits<float>::min(); // Avoid division by zero issues
+    float outputWeight = 0.0f;
 };
 
 struct Reservoir {
@@ -35,7 +34,8 @@ struct Reservoir {
 
     // Light sampling
     std::vector<SampleData> outputSamples;   
-    size_t numSamples = 1ULL; // Avoid division by zero issues
+    size_t numSamples   = 1ULL;                                 // Avoid division by zero issues
+    float wSum          = std::numeric_limits<float>::min();    // Avoid division by zero issues
 
     void update(LightSample sample, float weight);
 
