@@ -187,7 +187,7 @@ void UiManager::drawBvhDebug() {
         ImGui::Checkbox("Draw BVH Level", &debugBVHLevel);
         if (debugBVHLevel)  { ImGui::SliderInt("BVH Level", &bvhDebugLevel, 0, bvh.numLevels() - 1); }
         ImGui::Checkbox("Draw BVH Leaf", &debugBVHLeaf);
-        if (debugBVHLeaf)   { ImGui::SliderInt("BVH Leaf", &bvhDebugLeaf, 1, bvh.numLeaves()); }
+        if (debugBVHLeaf)   { ImGui::SliderInt("BVH Leaf", &bvhDebugLeaf, 1, bvh.numLeaves() - 1); }
     }
 }
 

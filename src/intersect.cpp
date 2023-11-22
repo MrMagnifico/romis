@@ -97,9 +97,21 @@ bool intersectRayWithShape(const AxisAlignedBox& box, Ray& ray) {
     float tIn   = std::max(std::max(xIn, yIn), zIn);
     float tOut  = std::min(std::min(xOut, yOut), zOut);
 
+    // Handle edge case of being in the box
+    bool originInBox = (box.lower.x < ray.origin.x && ray.origin.x < box.upper.x) &&
+                       (box.lower.y < ray.origin.y && ray.origin.y < box.upper.y) &&
+                       (box.lower.z < ray.origin.z && ray.origin.z < box.upper.z);
+    if (originInBox) {
+        ray.t = tOut;
+        return true;
+    }
+
     // Verify intersection and earliness
-    if (tIn > tOut  || tOut < 0.0f ||
-        ray.t < tIn || tIn <= 0.0f) { return false; }
+    if (ray.t   < tIn   ||  // There was an earlier intersection prior to calling this method
+        tIn     > tOut  ||  // Box is behind us
+        tOut    < 0.0f  ||  // Exit point is behind origin; we are 'in front' of the box
+        tIn     < 0.0f      // Entry point is behind origin; we are 'in front' of the box
+       ) { return false; }
     ray.t = tIn;
     return true;
 }
