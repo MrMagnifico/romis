@@ -79,4 +79,5 @@ _deps
 ### Blobs ###
 /build
 /data
+/out
 assignment.html

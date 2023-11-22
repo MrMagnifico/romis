@@ -77,7 +77,7 @@ struct Features {
     bool enableSoftShadow       = true;
     bool enableNormalInterp     = true;
     bool enableTextureMapping   = true;
-    bool enableAccelStructure   = false;
+    bool enableAccelStructure   = true;
 
     // Base render parameters
     uint32_t maxReflectionRecursion = 5U;
@@ -85,9 +85,9 @@ struct Features {
     // ReSTIR feature flags
     bool initialSamplesVisibilityCheck  = true;
     bool unbiasedCombination            = false;
-    bool spatialReuse                   = false;
+    bool spatialReuse                   = true;
     bool spatialReuseVisibilityCheck    = false;
-    bool temporalReuse                  = false;
+    bool temporalReuse                  = true;
 
     // ReSTIR parameters
     uint32_t initialLightSamples        = 32U;
