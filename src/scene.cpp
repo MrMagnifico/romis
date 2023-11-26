@@ -2,8 +2,70 @@
 #include <cmath>
 #include <iostream>
 
-Scene loadScenePrebuilt(SceneType type, const std::filesystem::path& dataDir)
-{
+std::vector<ParallelogramLight> regularLightGrid(glm::vec3 startPos, glm::ivec2 counts, glm::vec3 edge01, glm::vec3 edge02,
+                                                 glm::vec3 color,
+                                                 float emptySpacePercentage) {
+    std::vector<ParallelogramLight> lights;
+    glm::vec3 spaceEdge01   = edge01 / static_cast<float>(counts[0]);
+    glm::vec3 spaceEdge02   = edge02 / static_cast<float>(counts[1]);
+    glm::vec3 lightEdge01   = (edge01 * (1.0f - emptySpacePercentage)) / static_cast<float>(counts[0]);
+    glm::vec3 lightEdge02   = (edge02 * (1.0f - emptySpacePercentage)) / static_cast<float>(counts[1]);
+    for (int xLight = 0; xLight < counts.x; xLight++) {
+        for (int yLight = 0; yLight < counts.y; yLight++) {
+            glm::vec3 lightOrigin = startPos + (spaceEdge01 * static_cast<float>(xLight)) + (spaceEdge02 * static_cast<float>(yLight));
+            lights.emplace_back(ParallelogramLight {
+                .v0 = lightOrigin,
+                .edge01 = lightEdge01,
+                .edge02 = lightEdge02,
+                .color0 = color,
+                .color1 = color,
+                .color2 = color,
+                .color3 = color,
+            });
+        }
+    }
+    return lights;
+}
+
+void constructNightClubLights(Scene& scene) {
+    glm::vec3 startingVertex, lightEdge01, lightEdge02, lightColor, interLightDist;
+    glm::ivec2 counts           = glm::ivec2(10, 10);
+    float freeSpacePercentage   = 0.15f;
+
+    // Ceiling
+    startingVertex      = glm::vec3(8.576f, 6.550f, -7.6458f);
+    lightEdge01         = glm::vec3(-16.0f, 0.0f, 0.0f);
+    lightEdge02         = glm::vec3(0.0f, 0.0f, 11.0f);
+    lightColor          = glm::vec3(1.0f);
+    std::vector<ParallelogramLight> ceilLights = regularLightGrid(startingVertex, counts, lightEdge01, lightEdge02, lightColor, freeSpacePercentage);
+    // scene.lights.insert(scene.lights.end(), ceilLights.begin(), ceilLights.end());
+
+    // Left wall
+    startingVertex      = glm::vec3(9.4f, 6.4f, -9.1f);
+    lightEdge01         = glm::vec3(0.0f, 0.0f, 17.0f);
+    lightEdge02         = glm::vec3(0.0f, -6.0f, 0.0f);
+    lightColor          = glm::vec3(1.0f);
+    std::vector<ParallelogramLight> leftWallLights = regularLightGrid(startingVertex, counts, lightEdge01, lightEdge02, lightColor, freeSpacePercentage);
+    scene.lights.insert(scene.lights.end(), leftWallLights.begin(), leftWallLights.end());
+
+    // Right wall
+    startingVertex      = glm::vec3(-8.7f, 6.4f, -9.1f);
+    lightEdge01         = glm::vec3(0.0f, 0.0f, 17.0f);
+    lightEdge02         = glm::vec3(0.0f, -6.0f, 0.0f);
+    lightColor          = glm::vec3(1.0f);
+    std::vector<ParallelogramLight> rightWallLights = regularLightGrid(startingVertex, counts, lightEdge01, lightEdge02, lightColor, freeSpacePercentage);
+    // scene.lights.insert(scene.lights.end(), rightWallLights.begin(), rightWallLights.end());
+
+    // Back wall
+    startingVertex      = glm::vec3(9.2f, 6.4f, 8.6f);
+    lightEdge01         = glm::vec3(-17.0f, 0.0f, 0.0f);
+    lightEdge02         = glm::vec3(0.0f, -6.0f, 0.0f);
+    lightColor          = glm::vec3(1.0f);
+    std::vector<ParallelogramLight> backWallLights = regularLightGrid(startingVertex, counts, lightEdge01, lightEdge02, lightColor, freeSpacePercentage);
+    // scene.lights.insert(scene.lights.end(), backWallLights.begin(), backWallLights.end());
+}
+
+Scene loadScenePrebuilt(SceneType type, const std::filesystem::path& dataDir) {
     Scene scene;
     scene.type = type;
     switch (type) {
@@ -52,6 +114,11 @@ Scene loadScenePrebuilt(SceneType type, const std::filesystem::path& dataDir)
             .color3 = glm::vec3(1.0f, 1.0f, 1.0f), // White
         });
     } break;
+    case CornellNightClub: {
+        auto subMeshes = loadMesh(dataDir / "cornell-nightclub.obj", false);
+        std::move(std::begin(subMeshes), std::end(subMeshes), std::back_inserter(scene.meshes));
+        constructNightClubLights(scene);
+    } break;
     case Monkey: {
         // Load a 3D model of a Monkey
         auto subMeshes = loadMesh(dataDir / "monkey.obj", true);
@@ -91,13 +158,10 @@ Scene loadScenePrebuilt(SceneType type, const std::filesystem::path& dataDir)
     return scene;
 }
 
-Scene loadSceneFromFile(const std::filesystem::path& path, const std::vector<std::variant<PointLight, SegmentLight, ParallelogramLight>>& lights)
-{
+Scene loadSceneFromFile(const std::filesystem::path& path, const std::vector<std::variant<PointLight, SegmentLight, ParallelogramLight>>& lights) {
     Scene scene;
-    scene.lights = std::move(lights);
-
-    auto subMeshes = loadMesh(path);
+    scene.lights    = std::move(lights);
+    auto subMeshes  = loadMesh(path);
     std::move(std::begin(subMeshes), std::end(subMeshes), std::back_inserter(scene.meshes));
-
     return scene;
 }

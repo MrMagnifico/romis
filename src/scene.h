@@ -18,6 +18,7 @@ enum SceneType {
     CubeTextured,
     CornellBox,
     CornellBoxParallelogramLight,
+    CornellNightClub,
     Monkey,
     Teapot,
     Dragon,
@@ -31,6 +32,12 @@ struct Scene {
     std::vector<Sphere> spheres;
     std::vector<std::variant<PointLight, SegmentLight, ParallelogramLight>> lights;
 };
+
+std::vector<ParallelogramLight> regularLightGrid(glm::vec3 startPos, glm::ivec2 counts, glm::vec3 edge01, glm::vec3 edge02,
+                                                 glm::vec3 color,
+                                                 float emptySpacePercentage = 0.1f);
+
+void constructNightClubLights(Scene& scene);
 
 // Load a prebuilt scene.
 Scene loadScenePrebuilt(SceneType type, const std::filesystem::path& dataDir);

@@ -21,12 +21,16 @@ const glm::vec3 computeShading(const glm::vec3& lightPosition, const glm::vec3& 
     glm::vec3 R                 = glm::normalize(2.0f * dotNL * hitInfo.normal - L);
     float cosTheta              = glm::dot(R, V);
 
-    // Shading terms and final return
+    // Shading terms
     glm::vec3 diffuse   = lightColor    * diffuseColor         * dotNL;
     glm::vec3 specular  = lightColor    * hitInfo.material.ks  * std::pow(cosTheta, hitInfo.material.shininess);
     diffuse             = glm::any(glm::isnan(diffuse))     ? glm::vec3(0.0f) : diffuse;
     specular            = glm::any(glm::isnan(specular))    ? glm::vec3(0.0f) : specular;
-    return diffuse + specular;
+
+    // Inverse square law and final return
+    float pointToLightDist = glm::distance(intersectionPos, lightPosition);
+    if (zeroWithinEpsilon(pointToLightDist)) { pointToLightDist = ZERO_EPSILON; }
+    return (diffuse + specular) / (pointToLightDist * pointToLightDist);
 }
 
 const Ray computeReflectionRay(Ray ray, HitInfo hitInfo) {

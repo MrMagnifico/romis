@@ -55,7 +55,7 @@ int main(int argc, char** argv) {
         Trackball camera    { &window, glm::radians(config.cameras[0].fieldOfView), config.cameras[0].distanceFromLookAt };
         camera.setCamera(config.cameras[0].lookAt, glm::radians(config.cameras[0].rotation), config.cameras[0].distanceFromLookAt);
 
-        SceneType sceneType = SceneType::CornellBoxParallelogramLight;
+        SceneType sceneType = SceneType::CornellNightClub;
         std::optional<Ray> optDebugRay;
         Scene scene         = loadScenePrebuilt(sceneType, config.dataPath);
         BvhInterface bvh(&scene);

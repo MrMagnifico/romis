@@ -96,10 +96,11 @@ void UiManager::drawSceneSelection() {
         "Cube (textured)",
         "Cornell Box (with mirror)",
         "Cornell Box (parallelogram light and mirror)",
+        "Cornell Nightclub",
         "Monkey",
         "Teapot",
         "Dragon",
-        /* "AABBs",*/ "Spheres", /*"Mixed",*/
+        "Spheres",
         "Custom",
     };
     if (ImGui::Combo("Scenes", reinterpret_cast<int*>(&sceneType), items.data(), int(items.size()))) {
