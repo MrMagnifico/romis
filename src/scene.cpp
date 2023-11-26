@@ -29,40 +29,40 @@ std::vector<ParallelogramLight> regularLightGrid(glm::vec3 startPos, glm::ivec2 
 
 void constructNightClubLights(Scene& scene) {
     glm::vec3 startingVertex, lightEdge01, lightEdge02, lightColor, interLightDist;
-    glm::ivec2 counts           = glm::ivec2(10, 10);
-    float freeSpacePercentage   = 0.15f;
+    glm::ivec2 counts           = glm::ivec2(16, 16);
+    float freeSpacePercentage   = 0.30f;
 
     // Ceiling
-    startingVertex      = glm::vec3(8.576f, 6.550f, -7.6458f);
-    lightEdge01         = glm::vec3(-16.0f, 0.0f, 0.0f);
-    lightEdge02         = glm::vec3(0.0f, 0.0f, 11.0f);
-    lightColor          = glm::vec3(1.0f);
-    std::vector<ParallelogramLight> ceilLights = regularLightGrid(startingVertex, counts, lightEdge01, lightEdge02, lightColor, freeSpacePercentage);
+    // startingVertex      = glm::vec3(8.576f, 6.550f, -7.6458f);
+    // lightEdge01         = glm::vec3(-16.0f, 0.0f, 0.0f);
+    // lightEdge02         = glm::vec3(0.0f, 0.0f, 12.0f);
+    // lightColor          = glm::vec3(1.0f);
+    // std::vector<ParallelogramLight> ceilLights = regularLightGrid(startingVertex, counts, lightEdge01, lightEdge02, lightColor, freeSpacePercentage);
     // scene.lights.insert(scene.lights.end(), ceilLights.begin(), ceilLights.end());
 
     // Left wall
-    startingVertex      = glm::vec3(9.4f, 6.4f, -9.1f);
-    lightEdge01         = glm::vec3(0.0f, 0.0f, 17.0f);
-    lightEdge02         = glm::vec3(0.0f, -6.0f, 0.0f);
-    lightColor          = glm::vec3(1.0f);
-    std::vector<ParallelogramLight> leftWallLights = regularLightGrid(startingVertex, counts, lightEdge01, lightEdge02, lightColor, freeSpacePercentage);
-    scene.lights.insert(scene.lights.end(), leftWallLights.begin(), leftWallLights.end());
+    // startingVertex      = glm::vec3(9.4f, 6.4f, -9.1f);
+    // lightEdge01         = glm::vec3(0.0f, 0.0f, 17.0f);
+    // lightEdge02         = glm::vec3(0.0f, -6.0f, 0.0f);
+    // lightColor          = glm::vec3(1.0f);
+    // std::vector<ParallelogramLight> leftWallLights = regularLightGrid(startingVertex, counts, lightEdge01, lightEdge02, lightColor, freeSpacePercentage);
+    // scene.lights.insert(scene.lights.end(), leftWallLights.begin(), leftWallLights.end());
 
     // Right wall
     startingVertex      = glm::vec3(-8.7f, 6.4f, -9.1f);
     lightEdge01         = glm::vec3(0.0f, 0.0f, 17.0f);
     lightEdge02         = glm::vec3(0.0f, -6.0f, 0.0f);
-    lightColor          = glm::vec3(1.0f);
+    lightColor          = glm::vec3(0.65f);
     std::vector<ParallelogramLight> rightWallLights = regularLightGrid(startingVertex, counts, lightEdge01, lightEdge02, lightColor, freeSpacePercentage);
-    // scene.lights.insert(scene.lights.end(), rightWallLights.begin(), rightWallLights.end());
+    scene.lights.insert(scene.lights.end(), rightWallLights.begin(), rightWallLights.end());
 
     // Back wall
     startingVertex      = glm::vec3(9.2f, 6.4f, 8.6f);
     lightEdge01         = glm::vec3(-17.0f, 0.0f, 0.0f);
     lightEdge02         = glm::vec3(0.0f, -6.0f, 0.0f);
-    lightColor          = glm::vec3(1.0f);
+    lightColor          = glm::vec3(0.4f);
     std::vector<ParallelogramLight> backWallLights = regularLightGrid(startingVertex, counts, lightEdge01, lightEdge02, lightColor, freeSpacePercentage);
-    // scene.lights.insert(scene.lights.end(), backWallLights.begin(), backWallLights.end());
+    scene.lights.insert(scene.lights.end(), backWallLights.begin(), backWallLights.end());
 }
 
 Scene loadScenePrebuilt(SceneType type, const std::filesystem::path& dataDir) {

@@ -34,7 +34,7 @@ DISABLE_WARNINGS_POP()
 #include <thread>
 #include <variant>
 
-int debugBVHLeafId = 0;
+int debugBVHLeafId  = 0;
 
 static void drawLightsOpenGL(const Scene& scene, const Trackball& camera, int selectedLight);
 static void drawSceneOpenGL(const Scene& scene);
@@ -50,7 +50,7 @@ int main(int argc, char** argv) {
         std::cout << "\n Press the [R] key on your keyboard to create a ray towards the mouse cursor" << std::endl
                   << std::endl;
 
-        Window window       { "Final Project", config.windowSize, OpenGLVersion::GL2, true };
+        Window window       { "Seminar Implementation (ReSTIR)", config.windowSize, OpenGLVersion::GL2, true };
         Screen screen       { config.windowSize, true };
         Trackball camera    { &window, glm::radians(config.cameras[0].fieldOfView), config.cameras[0].distanceFromLookAt };
         camera.setCamera(config.cameras[0].lookAt, glm::radians(config.cameras[0].rotation), config.cameras[0].distanceFromLookAt);
@@ -159,10 +159,14 @@ int main(int argc, char** argv) {
                     }
                 } break;
                 case ViewMode::RayTracing: {
+                    const auto start    = std::chrono::high_resolution_clock::now();
                     screen.clear(glm::vec3(0.0f));
-                    previousFrameGrid = make_shared<ReservoirGrid>(renderRayTracing(previousFrameGrid, scene, camera, bvh, screen, camera.getLastDelta(), config.features));
+                    previousFrameGrid   = make_shared<ReservoirGrid>(renderRayTracing(previousFrameGrid, scene, camera, bvh, screen, camera.getLastDelta(), config.features));
                     screen.setPixel(0, 0, glm::vec3(1.0f));
                     screen.draw(); // Takes the image generated using ray tracing and outputs it to the screen using OpenGL.
+                    const auto end      = std::chrono::high_resolution_clock::now();
+                    const auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+                    fmt::print("Render time: {}ms\n", duration);
                 } break;
                 default:
                     break;
@@ -180,7 +184,7 @@ int main(int argc, char** argv) {
         // will not be loaded, and the window will not be shown.
         // All debug draw calls will be disabled.
         enableDebugDraw = false;
-        Window window { "Final Project", config.windowSize, OpenGLVersion::GL2, false };
+        Window window { "Seminar Implementation (ReSTIR)", config.windowSize, OpenGLVersion::GL2, false };
 
         // Load scene.
         Scene scene;
@@ -202,8 +206,7 @@ int main(int argc, char** argv) {
         // Create output directory if it does not exist.
         if (!std::filesystem::exists(config.outputDir)) { std::filesystem::create_directories(config.outputDir); }
 
-        using clock                     = std::chrono::high_resolution_clock;
-        const auto start                = clock::now();
+        const auto start                = std::chrono::high_resolution_clock::now();
         std::string start_time_string   = fmt::format("{:%Y-%m-%d-%H:%M:%S}", fmt::localtime(std::time(nullptr)));
 
         std::vector<std::thread> workers;
@@ -223,7 +226,7 @@ int main(int argc, char** argv) {
             ++i;
         }
         for (auto& worker : workers) { worker.join(); }
-        const auto end      = clock::now();
+        const auto end      = std::chrono::high_resolution_clock::now();
         const auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
         fmt::print("Rendering took {} ms, {} images rendered.\n", duration, config.cameras.size());
     }

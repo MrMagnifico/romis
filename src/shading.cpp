@@ -29,7 +29,7 @@ const glm::vec3 computeShading(const glm::vec3& lightPosition, const glm::vec3& 
 
     // Inverse square law and final return
     float pointToLightDist = glm::distance(intersectionPos, lightPosition);
-    if (zeroWithinEpsilon(pointToLightDist)) { pointToLightDist = ZERO_EPSILON; }
+    if (zeroWithinEpsilon(pointToLightDist)) { pointToLightDist = 1.0f; }
     return (diffuse + specular) / (pointToLightDist * pointToLightDist);
 }
 

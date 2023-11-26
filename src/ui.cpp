@@ -42,12 +42,12 @@ UiManager::UiManager(BvhInterface& bvh, Trackball& camera, Config& config, std::
 void UiManager::draw() {
     ImGui::Begin("Seminar Implementation");
     ImGui::BeginTabBar("Options");
-    if (ImGui::BeginTabItem("General")) {
-        drawProjectTab();
-        ImGui::EndTabItem();
-    }
     if (ImGui::BeginTabItem("ReSTIR")) {
         drawRestirTab();
+        ImGui::EndTabItem();
+    }
+    if (ImGui::BeginTabItem("General")) {
+        drawProjectTab();
         ImGui::EndTabItem();
     }
     if (ImGui::BeginTabItem("Misc")) {
