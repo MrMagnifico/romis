@@ -47,7 +47,8 @@ int main(int argc, char** argv) {
 
     if (!config.cliRenderingEnabled) {
         Trackball::printHelp();
-        std::cout << "\n Press the [R] key on your keyboard to create a ray towards the mouse cursor"       << std::endl
+        std::cout << std::endl
+                  << "Press the [R] key on your keyboard to create a ray towards the mouse cursor"       << std::endl
                   << "Press the [M] key on your keyboard to toggle between rasterized and ray traced modes" << std::endl
                   << std::endl;
 
