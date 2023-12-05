@@ -83,7 +83,7 @@ struct Features {
     uint32_t maxReflectionRecursion = 5U;
 
     // ReSTIR feature flags
-    bool initialSamplesVisibilityCheck  = true;
+    bool initialSamplesVisibilityCheck  = false;
     bool unbiasedCombination            = false;
     bool spatialReuse                   = true;
     bool spatialReuseVisibilityCheck    = false;

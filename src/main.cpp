@@ -34,7 +34,7 @@ DISABLE_WARNINGS_POP()
 #include <thread>
 #include <variant>
 
-int debugBVHLeafId  = 0;
+int debugBVHLeafId = 0;
 
 static void drawLightsOpenGL(const Scene& scene, const Trackball& camera, int selectedLight);
 static void drawSceneOpenGL(const Scene& scene);
@@ -47,7 +47,8 @@ int main(int argc, char** argv) {
 
     if (!config.cliRenderingEnabled) {
         Trackball::printHelp();
-        std::cout << "\n Press the [R] key on your keyboard to create a ray towards the mouse cursor" << std::endl
+        std::cout << "\n Press the [R] key on your keyboard to create a ray towards the mouse cursor"       << std::endl
+                  << "Press the [M] key on your keyboard to toggle between rasterized and ray traced modes" << std::endl
                   << std::endl;
 
         Window window       { "Seminar Implementation (ReSTIR)", config.windowSize, OpenGLVersion::GL2, true };
@@ -92,8 +93,9 @@ int main(int argc, char** argv) {
                         window.close();
                         break;
                     }
-                    case GLFW_KEY_M: {
-                        viewMode = viewMode == ViewMode::Rasterization ? ViewMode::RayTracing : ViewMode::Rasterization;
+                    case GLFW_KEY_M: { // Change render mode and reset temporal predecessor
+                        viewMode            = viewMode == ViewMode::Rasterization ? ViewMode::RayTracing : ViewMode::Rasterization;
+                        previousFrameGrid   = nullptr;
                         break;
                     }
                 };
@@ -121,8 +123,7 @@ int main(int argc, char** argv) {
                     glPushAttrib(GL_ALL_ATTRIB_BITS);
                     if (debugBVHLeaf) {
                         glEnable(GL_POLYGON_OFFSET_FILL);
-                        // To ensure that debug draw is always visible, adjust the scale used to calculate the depth value.
-                        glPolygonOffset(float(1.4), 1.0);
+                        glPolygonOffset(float(1.4), 1.0); // To ensure that debug draw is always visible, adjust the scale used to calculate the depth value
                         drawSceneOpenGL(scene);
                         glDisable(GL_POLYGON_OFFSET_FILL);
                     } else {
@@ -134,7 +135,7 @@ int main(int argc, char** argv) {
                         enableDebugDraw = true;
                         glDisable(GL_LIGHTING);
                         glDepthFunc(GL_LEQUAL);
-                        (void)genCanonicalSamples(scene, bvh, config.features, *optDebugRay);
+                        (void) genCanonicalSamples(scene, bvh, config.features, *optDebugRay);
                         enableDebugDraw = false;
                     }
                     glPopAttrib();

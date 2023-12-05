@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.18 FATAL_ERROR)
-project(ComputerGraphics C CXX CUDA)
+project(ComputerGraphics C CXX)
 
 option(USE_PREBUILT_INTERSECT "Enable using prebuilt intersection library" OFF)
 
