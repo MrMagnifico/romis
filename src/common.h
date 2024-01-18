@@ -16,6 +16,13 @@ enum class ViewMode {
     RayTracing = 1
 };
 
+// Controls how canonical samples are generated for frames
+// where canonical sample generation is not forced
+enum class UndersamplingMode {
+    Checkerboard = 0,   // Checkboard pattern that alternates per frame
+    NoCanonical         // No canonical sample generation for all pixels
+};
+
 struct HitInfo {
     glm::vec3 normal;
     glm::vec3 barycentricCoord;
@@ -83,7 +90,7 @@ struct Features {
     uint32_t maxReflectionRecursion = 5U;
 
     // ReSTIR feature flags
-    bool initialSamplesVisibilityCheck  = false;
+    bool initialSamplesVisibilityCheck  = true;
     bool unbiasedCombination            = false;
     bool spatialReuse                   = true;
     bool spatialReuseVisibilityCheck    = false;
@@ -100,6 +107,7 @@ struct Features {
     // ReSTIR undersampling parameters
     bool spatialRejectionHeuristics     = true;
     uint32_t roundsBeforeCanonical      = 1U;
+    UndersamplingMode undersamplingMode = UndersamplingMode::Checkerboard;
     float maxDepthDifference            = 0.1f;
     float maxNormalDifferenceDegrees    = 25.0f;
 

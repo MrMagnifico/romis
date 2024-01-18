@@ -17,8 +17,10 @@
 #include <vector>
 
 
-ReservoirGrid genInitialSamples(const Scene& scene, const Trackball& camera, const BvhInterface& bvh, Screen& screen, const Features& features) {
+ReservoirGrid genInitialSamples(uint32_t frameCount,
+                                const Scene& scene, const Trackball& camera, const BvhInterface& bvh, Screen& screen, const Features& features) {
     glm::ivec2 windowResolution = screen.resolution();
+    int frameCountParity        = frameCount % 2U;
     ReservoirGrid initialSamples(windowResolution.y, std::vector<Reservoir>(windowResolution.x, Reservoir(features.numSamplesInReservoir)));
 
     #ifdef NDEBUG
@@ -28,8 +30,23 @@ ReservoirGrid genInitialSamples(const Scene& scene, const Trackball& camera, con
         for (int x = 0; x != windowResolution.x; x++) {
             const glm::vec2 normalizedPixelPos { float(x) / float(windowResolution.x) * 2.0f - 1.0f,
                                                  float(y) / float(windowResolution.y) * 2.0f - 1.0f };
-            const Ray cameraRay     = camera.generateRay(normalizedPixelPos);
-            initialSamples[y][x]    = genCanonicalSamples(scene, bvh, features, cameraRay);
+            const Ray cameraRay = camera.generateRay(normalizedPixelPos);
+
+            // Determine if canonical samples should actually be drawn
+            // and for which pixels
+            bool intersectionOnly = false;
+            if (frameCount % features.roundsBeforeCanonical != 0) {
+                switch (features.undersamplingMode) {
+                    case UndersamplingMode::Checkerboard:
+                        intersectionOnly = (x + y) % 2U == frameCountParity;
+                        break;
+                    case UndersamplingMode::NoCanonical:
+                        intersectionOnly = true;
+                        break;
+                }
+            }
+
+            initialSamples[y][x] = genCanonicalSamples(scene, bvh, features, cameraRay, intersectionOnly);
         }
     }
     return initialSamples;
@@ -60,7 +77,7 @@ void spatialReuse(ReservoirGrid& reservoirGrid, ReservoirGrid& resampleGrid,
                     int neighbourY              = std::clamp(y + distr(gen), 0, windowResolution.y - 1);
                     Reservoir neighbour         = prevIteration[neighbourY][neighbourX]; // Create copy for local modification
                     
-                    // Conduct heuristic check if needed
+                    // Conduct heuristic check if desired
                     if (features.spatialRejectionHeuristics) { 
                         float depthFracDiff     = std::abs(1.0f - (neighbour.cameraRay.t / current.cameraRay.t));   // Check depth difference (greater than 10% leads to rejection) 
                         float normalsDotProd    = glm::dot(neighbour.hitInfo.normal, current.hitInfo.normal);       // Check normal difference (greater than 25 degrees leads to rejection)
@@ -114,11 +131,11 @@ void temporalReuse(ReservoirGrid& reservoirGrid, ReservoirGrid& previousFrameGri
     }
 }
 
-ReservoirGrid renderRayTracing(std::shared_ptr<ReservoirGrid> previousFrameGrid,
+ReservoirGrid renderRayTracing(std::shared_ptr<ReservoirGrid> previousFrameGrid, uint32_t frameCount,
                                const Scene& scene, const Trackball& camera,
                                const BvhInterface& bvh, Screen& screen,
                                const Features& features) {
-    ReservoirGrid reservoirGrid = genInitialSamples(scene, camera, bvh, screen, features);
+    ReservoirGrid reservoirGrid = genInitialSamples(frameCount, scene, camera, bvh, screen, features);
     if (features.temporalReuse && previousFrameGrid)    { temporalReuse(reservoirGrid, *previousFrameGrid.get(), bvh, screen, features); }
     if (features.spatialReuse && previousFrameGrid)     { spatialReuse(reservoirGrid, *previousFrameGrid.get(), bvh, screen, features); }
 

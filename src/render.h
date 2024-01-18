@@ -14,7 +14,8 @@ class Trackball;
 class BvhInterface;
 struct Features;
 
-ReservoirGrid genInitialSamples(const Scene& scene, const Trackball& camera, const BvhInterface& bvh, const Screen& screen, const Features& features);
+ReservoirGrid genInitialSamples(uint32_t frameCount,
+                                const Scene& scene, const Trackball& camera, const BvhInterface& bvh, const Screen& screen, const Features& features);
 
 void spatialReuse(ReservoirGrid& reservoirGrid, ReservoirGrid& resampleGrid,
                   const BvhInterface& bvh, const Screen& screen, const Features& features);
@@ -23,7 +24,7 @@ void temporalReuse(ReservoirGrid& reservoirGrid, ReservoirGrid& previousFrameGri
                    const BvhInterface& bvh, Screen& screen, const Features& features);
 
 // Main rendering function.
-ReservoirGrid renderRayTracing(std::shared_ptr<ReservoirGrid> previousFrameGrid,
+ReservoirGrid renderRayTracing(std::shared_ptr<ReservoirGrid> previousFrameGrid, uint32_t frameCount,
                                const Scene& scene, const Trackball& camera,
                                const BvhInterface& bvh, Screen& screen,
                                const Features& features);

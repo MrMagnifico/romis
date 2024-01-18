@@ -36,7 +36,7 @@ void sampleParallelogramLight(const ParallelogramLight& parallelogramLight, glm:
 // Given an intersection, computes the contribution from all light sources at the intersection point
 // in this method you should cycle the light sources and for each one compute their contribution
 // don't forget to check for visibility (shadows!)
-Reservoir genCanonicalSamples(const Scene& scene, const BvhInterface& bvh, const Features& features, Ray ray) {
+Reservoir genCanonicalSamples(const Scene& scene, const BvhInterface& bvh, const Features& features, Ray ray, bool intersectionOnly) {
     Reservoir reservoir(features.numSamplesInReservoir);
     
     // No lights to sample, just return
@@ -45,13 +45,12 @@ Reservoir genCanonicalSamples(const Scene& scene, const BvhInterface& bvh, const
     // Compute camera ray intersection with scene
     bool intersectScene = bvh.intersect(ray, reservoir.hitInfo, features);
     reservoir.cameraRay = ray;
-    if (!intersectScene) {   
+    if (!intersectScene || intersectionOnly) {   
         drawRay(ray, CAMERA_RAY_NO_HIT_COLOR);  // Draw a red debug ray if the ray missed
         return reservoir;                       // No intersection with scene, so empty reservoir
     }
 
     // Uniform selection of light sources
-    // TODO: Figure out better solution than uniform sampling (fuck you, point lights)
     std::random_device rd;
     std::mt19937 gen(rd());
     std::uniform_int_distribution<> distr(0, scene.lights.size() - 1UL);

@@ -1,5 +1,6 @@
 #include "ui.h"
 
+#include "magic_enum.hpp"
 #include "render.h"
 #include "utils.h"
 
@@ -175,7 +176,7 @@ void UiManager::drawRenderToFile() {
             // Perform a new render and measure the time it took to generate the image.
             using clock         = std::chrono::high_resolution_clock;
             const auto start    = clock::now();
-            previousFrameGrid   = std::make_shared<ReservoirGrid>(renderRayTracing(previousFrameGrid, scene, camera, bvh, screen, config.features));
+            previousFrameGrid   = std::make_shared<ReservoirGrid>(renderRayTracing(previousFrameGrid, 0, scene, camera, bvh, screen, config.features)); // TODO: Pass actual frame count
             const auto end      = clock::now();
             std::cout << "Time to render image: " << std::chrono::duration<float, std::milli>(end - start).count() << " milliseconds" << std::endl;
             
@@ -309,8 +310,15 @@ void UiManager::drawRestirParams() {
 
 void UiManager::drawRestirUndersampling() {
     if (ImGui::CollapsingHeader("Undersampling", ImGuiTreeNodeFlags_DefaultOpen)) {
+        // Undersampling mode data generation
+        constexpr auto optionsUndersamplingMode = magic_enum::enum_names<UndersamplingMode>();
+        std::vector<const char*> optionsUndersamplingModePointers;
+        std::transform(std::begin(optionsUndersamplingMode), std::end(optionsUndersamplingMode), std::back_inserter(optionsUndersamplingModePointers),
+            [](const auto& str) { return str.data(); });
+
         ImGui::Checkbox("Use spatial rejection heuristics", &config.features.spatialRejectionHeuristics);
         ImGui::SliderInt("Rounds before canonical", (int*) &config.features.roundsBeforeCanonical, 1, 8);
+        ImGui::Combo("Undersampling mode", (int*) &config.features.undersamplingMode, optionsUndersamplingModePointers.data(), static_cast<int>(optionsUndersamplingModePointers.size()));
         ImGui::DragFloat("Max depth difference (fraction)", &config.features.maxDepthDifference, 0.01f, 0.05f, 0.25f);
         ImGui::DragFloat("Max normal difference (degrees)", &config.features.maxNormalDifferenceDegrees, 10.0f, 1.0f, 90.0f);
     }

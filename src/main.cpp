@@ -69,6 +69,7 @@ int main(int argc, char** argv) {
         bool debugBVHLeaf       = false;
         ViewMode viewMode       = ViewMode::Rasterization;
         int selectedLightIdx    = scene.lights.empty() ? -1 : 0;
+        uint32_t frameCounter   = 0U;
 
         UiManager uiManager(bvh, camera, config, optDebugRay, previousFrameGrid, scene, sceneType, screen, viewMode, window,
                             bvhDebugLevel, bvhDebugLeaf, debugBVHLevel, debugBVHLeaf, selectedLightIdx);
@@ -97,6 +98,7 @@ int main(int argc, char** argv) {
                     case GLFW_KEY_M: { // Change render mode and reset temporal predecessor
                         viewMode            = viewMode == ViewMode::Rasterization ? ViewMode::RayTracing : ViewMode::Rasterization;
                         previousFrameGrid   = nullptr;
+                        frameCounter        = 0U;
                         break;
                     }
                 };
@@ -136,7 +138,7 @@ int main(int argc, char** argv) {
                         enableDebugDraw = true;
                         glDisable(GL_LIGHTING);
                         glDepthFunc(GL_LEQUAL);
-                        (void) genCanonicalSamples(scene, bvh, config.features, *optDebugRay);
+                        (void) genCanonicalSamples(scene, bvh, config.features, *optDebugRay, false);
                         enableDebugDraw = false;
                     }
                     glPopAttrib();
@@ -163,7 +165,7 @@ int main(int argc, char** argv) {
                 case ViewMode::RayTracing: {
                     const auto start    = std::chrono::high_resolution_clock::now();
                     screen.clear(glm::vec3(0.0f));
-                    previousFrameGrid   = make_shared<ReservoirGrid>(renderRayTracing(previousFrameGrid, scene, camera, bvh, screen, config.features));
+                    previousFrameGrid   = make_shared<ReservoirGrid>(renderRayTracing(previousFrameGrid, frameCounter, scene, camera, bvh, screen, config.features));
                     screen.setPixel(0, 0, glm::vec3(1.0f));
                     screen.draw(); // Takes the image generated using ray tracing and outputs it to the screen using OpenGL.
                     const auto end      = std::chrono::high_resolution_clock::now();
@@ -175,6 +177,7 @@ int main(int argc, char** argv) {
                 }
 
             window.swapBuffers();
+            frameCounter++;
         }
     } else {
         // Command-line rendering.
@@ -218,7 +221,7 @@ int main(int argc, char** argv) {
                 screen.clear(glm::vec3(0.0f));
                 Trackball camera { &window, glm::radians(cameraConfig.fieldOfView), cameraConfig.distanceFromLookAt };
                 camera.setCamera(cameraConfig.lookAt, glm::radians(cameraConfig.rotation), cameraConfig.distanceFromLookAt);
-                previousFrameGrid           = make_shared<ReservoirGrid>(renderRayTracing(previousFrameGrid, scene, camera, bvh, screen, config.features));
+                previousFrameGrid           = make_shared<ReservoirGrid>(renderRayTracing(previousFrameGrid, 0U, scene, camera, bvh, screen, config.features));
                 const auto filename_base    = fmt::format("{}_{}_cam_{}", sceneName, start_time_string, index);
                 const auto filepath         = config.outputDir / (filename_base + ".bmp");
                 fmt::print("Image {} saved to {}\n", index, filepath.string());
