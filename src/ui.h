@@ -56,6 +56,7 @@ private:
     void drawRestirTab();
     void drawRestirFeaturesToggles();
     void drawRestirParams();
+    void drawRestirUndersampling();
 
     // Misc UI bits
     void drawMiscTab();

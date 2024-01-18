@@ -97,6 +97,12 @@ struct Features {
     uint32_t spatialResampleRadius      = 10U;
     uint32_t temporalClampM             = 20U;
 
+    // ReSTIR undersampling parameters
+    bool spatialRejectionHeuristics     = true;
+    uint32_t roundsBeforeCanonical      = 1U;
+    float maxDepthDifference            = 0.1f;
+    float maxNormalDifferenceDegrees    = 25.0f;
+
     // Misc parameters
     bool enableToneMapping  = true;
     float gamma             = 1.0f;

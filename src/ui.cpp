@@ -83,6 +83,9 @@ void UiManager::drawRestirTab() {
     ImGui::Spacing();
     ImGui::Separator();
     drawRestirParams();
+    ImGui::Spacing();
+    ImGui::Separator();
+    drawRestirUndersampling();
 }
 
 void UiManager::drawMiscTab() {
@@ -172,7 +175,7 @@ void UiManager::drawRenderToFile() {
             // Perform a new render and measure the time it took to generate the image.
             using clock         = std::chrono::high_resolution_clock;
             const auto start    = clock::now();
-            previousFrameGrid   = std::make_shared<ReservoirGrid>(renderRayTracing(previousFrameGrid, scene, camera, bvh, screen, camera.getLastDelta(), config.features));
+            previousFrameGrid   = std::make_shared<ReservoirGrid>(renderRayTracing(previousFrameGrid, scene, camera, bvh, screen, config.features));
             const auto end      = clock::now();
             std::cout << "Time to render image: " << std::chrono::duration<float, std::milli>(end - start).count() << " milliseconds" << std::endl;
             
@@ -301,6 +304,15 @@ void UiManager::drawRestirParams() {
         ImGui::SliderInt("Spatial resampling passes",   (int*) &config.features.spatialResamplingPasses,    1, 5);
         ImGui::SliderInt("Spatial resample radius",     (int*) &config.features.spatialResampleRadius,      1, 30);
         ImGui::SliderInt("Temporal M clamp",            (int*) &config.features.temporalClampM,             1, 40);
+    }
+}
+
+void UiManager::drawRestirUndersampling() {
+    if (ImGui::CollapsingHeader("Undersampling", ImGuiTreeNodeFlags_DefaultOpen)) {
+        ImGui::Checkbox("Use spatial rejection heuristics", &config.features.spatialRejectionHeuristics);
+        ImGui::SliderInt("Rounds before canonical", (int*) &config.features.roundsBeforeCanonical, 1, 8);
+        ImGui::DragFloat("Max depth difference (fraction)", &config.features.maxDepthDifference, 0.01f, 0.05f, 0.25f);
+        ImGui::DragFloat("Max normal difference (degrees)", &config.features.maxNormalDifferenceDegrees, 10.0f, 1.0f, 90.0f);
     }
 }
 

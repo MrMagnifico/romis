@@ -48,7 +48,7 @@ int main(int argc, char** argv) {
     if (!config.cliRenderingEnabled) {
         Trackball::printHelp();
         std::cout << std::endl
-                  << "Press the [R] key on your keyboard to create a ray towards the mouse cursor"       << std::endl
+                  << "Press the [R] key on your keyboard to create a ray towards the mouse cursor"          << std::endl
                   << "Press the [M] key on your keyboard to toggle between rasterized and ray traced modes" << std::endl
                   << std::endl;
 
@@ -163,7 +163,7 @@ int main(int argc, char** argv) {
                 case ViewMode::RayTracing: {
                     const auto start    = std::chrono::high_resolution_clock::now();
                     screen.clear(glm::vec3(0.0f));
-                    previousFrameGrid   = make_shared<ReservoirGrid>(renderRayTracing(previousFrameGrid, scene, camera, bvh, screen, camera.getLastDelta(), config.features));
+                    previousFrameGrid   = make_shared<ReservoirGrid>(renderRayTracing(previousFrameGrid, scene, camera, bvh, screen, config.features));
                     screen.setPixel(0, 0, glm::vec3(1.0f));
                     screen.draw(); // Takes the image generated using ray tracing and outputs it to the screen using OpenGL.
                     const auto end      = std::chrono::high_resolution_clock::now();
@@ -218,7 +218,7 @@ int main(int argc, char** argv) {
                 screen.clear(glm::vec3(0.0f));
                 Trackball camera { &window, glm::radians(cameraConfig.fieldOfView), cameraConfig.distanceFromLookAt };
                 camera.setCamera(cameraConfig.lookAt, glm::radians(cameraConfig.rotation), cameraConfig.distanceFromLookAt);
-                previousFrameGrid           = make_shared<ReservoirGrid>(renderRayTracing(previousFrameGrid, scene, camera, bvh, screen, camera.getLastDelta(), config.features));
+                previousFrameGrid           = make_shared<ReservoirGrid>(renderRayTracing(previousFrameGrid, scene, camera, bvh, screen, config.features));
                 const auto filename_base    = fmt::format("{}_{}_cam_{}", sceneName, start_time_string, index);
                 const auto filepath         = config.outputDir / (filename_base + ".bmp");
                 fmt::print("Image {} saved to {}\n", index, filepath.string());

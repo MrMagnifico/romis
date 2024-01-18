@@ -35,14 +35,16 @@ ReservoirGrid genInitialSamples(const Scene& scene, const Trackball& camera, con
     return initialSamples;
 }
 
-void spatialReuse(ReservoirGrid& reservoirGrid, const BvhInterface& bvh, const Screen& screen, const Features& features) {
+void spatialReuse(ReservoirGrid& reservoirGrid, ReservoirGrid& resampleGrid,
+                  const BvhInterface& bvh, const Screen& screen, const Features& features) {
     // Uniform selection of neighbours in N pixel Manhattan distance radius
     std::random_device rd;
     std::mt19937 gen(rd());
     std::uniform_int_distribution<> distr(-features.spatialResampleRadius, features.spatialResampleRadius);
 
-    glm::ivec2 windowResolution = screen.resolution();
-    ReservoirGrid prevIteration = reservoirGrid;
+    glm::ivec2 windowResolution     = screen.resolution();
+    ReservoirGrid prevIteration     = resampleGrid;
+    float maxDotProductDifference   = glm::cos(glm::radians(features.maxNormalDifferenceDegrees));
     for (uint32_t pass = 0U; pass < features.spatialResamplingPasses; pass++) {
         #ifdef NDEBUG
         #pragma omp parallel for schedule(guided)
@@ -58,11 +60,11 @@ void spatialReuse(ReservoirGrid& reservoirGrid, const BvhInterface& bvh, const S
                     int neighbourY              = std::clamp(y + distr(gen), 0, windowResolution.y - 1);
                     Reservoir neighbour         = prevIteration[neighbourY][neighbourX]; // Create copy for local modification
                     
-                    // Conduct heuristic check if biased combination is used
-                    if (!features.unbiasedCombination) { 
+                    // Conduct heuristic check if needed
+                    if (features.spatialRejectionHeuristics) { 
                         float depthFracDiff     = std::abs(1.0f - (neighbour.cameraRay.t / current.cameraRay.t));   // Check depth difference (greater than 10% leads to rejection) 
                         float normalsDotProd    = glm::dot(neighbour.hitInfo.normal, current.hitInfo.normal);       // Check normal difference (greater than 25 degrees leads to rejection)
-                        if (depthFracDiff > 0.1f || normalsDotProd < 0.90630778703f) { continue; } 
+                        if (depthFracDiff > features.maxDepthDifference || normalsDotProd < maxDotProductDifference) { continue; } 
                     }
                     
                     selected.push_back(neighbour);
@@ -84,8 +86,8 @@ void spatialReuse(ReservoirGrid& reservoirGrid, const BvhInterface& bvh, const S
     }
 }
 
-void temporalReuse(ReservoirGrid& reservoirGrid, ReservoirGrid& previousFrameGrid, const BvhInterface& bvh,
-                   Screen& screen, const glm::vec2 motionVector, const Features& features) {
+void temporalReuse(ReservoirGrid& reservoirGrid, ReservoirGrid& previousFrameGrid,
+                   const BvhInterface& bvh, Screen& screen, const Features& features) {
     glm::ivec2 windowResolution = screen.resolution();
     #ifdef NDEBUG
     #pragma omp parallel for schedule(guided)
@@ -93,7 +95,6 @@ void temporalReuse(ReservoirGrid& reservoirGrid, ReservoirGrid& previousFrameGri
     for (int y = 0; y < windowResolution.y; y++) {
         for (int x = 0; x != windowResolution.x; x++) {
             // Clamp M and wSum values to a user-defined multiple of the current frame's to bound temporal creep
-            // TODO: Add consideration of motion vectors
             Reservoir& current              = reservoirGrid[y][x];
             Reservoir& temporalPredecessor  = previousFrameGrid[y][x];
             size_t multipleCurrentM         = (features.temporalClampM * current.numSamples) + 1ULL;
@@ -116,10 +117,10 @@ void temporalReuse(ReservoirGrid& reservoirGrid, ReservoirGrid& previousFrameGri
 ReservoirGrid renderRayTracing(std::shared_ptr<ReservoirGrid> previousFrameGrid,
                                const Scene& scene, const Trackball& camera,
                                const BvhInterface& bvh, Screen& screen,
-                               const glm::vec2 motionVector, const Features& features) {
+                               const Features& features) {
     ReservoirGrid reservoirGrid = genInitialSamples(scene, camera, bvh, screen, features);
-    if (features.temporalReuse && previousFrameGrid)    { temporalReuse(reservoirGrid, *previousFrameGrid.get(), bvh, screen, motionVector, features); }
-    if (features.spatialReuse)                          { spatialReuse(reservoirGrid, bvh, screen, features); }
+    if (features.temporalReuse && previousFrameGrid)    { temporalReuse(reservoirGrid, *previousFrameGrid.get(), bvh, screen, features); }
+    if (features.spatialReuse && previousFrameGrid)     { spatialReuse(reservoirGrid, *previousFrameGrid.get(), bvh, screen, features); }
 
     // Final shading
     glm::ivec2 windowResolution = screen.resolution();
