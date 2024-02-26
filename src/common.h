@@ -20,7 +20,8 @@ enum class ViewMode {
 // where canonical sample generation is not forced
 enum class UndersamplingMode {
     Checkerboard = 0,   // Checkboard pattern that alternates per frame
-    NoCanonical         // No canonical sample generation for all pixels
+    NoCanonical,        // No canonical sample generation for all pixels
+    Mask                // Use an input boolean mask
 };
 
 struct HitInfo {
@@ -101,15 +102,18 @@ struct Features {
     uint32_t initialLightSamples        = 32U;
     uint32_t numNeighboursToSample      = 5U;
     uint32_t spatialResamplingPasses    = 2U;
-    uint32_t spatialResampleRadius      = 10U;
+    int32_t spatialResampleRadius       = 10U;
+    bool spatialRejectionHeuristics     = true;
     uint32_t temporalClampM             = 20U;
 
     // ReSTIR undersampling parameters
-    bool spatialRejectionHeuristics     = true;
     uint32_t roundsBeforeCanonical      = 1U;
     UndersamplingMode undersamplingMode = UndersamplingMode::Checkerboard;
     float maxDepthDifference            = 0.1f;
     float maxNormalDifferenceDegrees    = 25.0f;
+    bool mustHaveTemporalPredecessor    = true;
+    int32_t minValidSpatialNeighbours   = 1U;
+    bool undersamplingSpatialHeuristics = true;
 
     // Misc parameters
     bool enableToneMapping  = true;

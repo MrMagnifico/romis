@@ -15,10 +15,58 @@
 #include <iostream>
 #include <random>
 #include <vector>
+#include <stdexcept>
 
+GridMask genCanonicalMask(std::shared_ptr<ReservoirGrid> previousFrameGrid, const Screen& screen, const Features& features) {
+    glm::ivec2 windowResolution                 = screen.resolution();
+    GridMask canonicalMask(windowResolution.y, std::vector<bool>(windowResolution.x, true));
+    if (!previousFrameGrid) { return canonicalMask; } // No previous frame reservoir; must generate canonical samples for all pixels
+    const ReservoirGrid& previousFrameGridVal   = *previousFrameGrid.get();
+    float maxDotProductDifference               = glm::cos(glm::radians(features.maxNormalDifferenceDegrees));
 
-ReservoirGrid genInitialSamples(uint32_t frameCount,
-                                const Scene& scene, const Trackball& camera, const BvhInterface& bvh, Screen& screen, const Features& features) {
+    #ifdef NDEBUG
+    #pragma omp parallel for schedule(guided)
+    #endif
+    for (int y = 0; y < windowResolution.y; y++) {
+        for (int x = 0; x != windowResolution.x; x++) {
+            // Check temporal predecessor existence
+            if (features.mustHaveTemporalPredecessor && previousFrameGridVal[y][x].isEmpty()) { continue; }
+            const Reservoir& current = previousFrameGridVal[y][x]; // Assume ray intersection information remains the same as the previous frame if temporal predecessor check passed
+
+            // Check if enough valid spatial neighbours exist
+            uint32_t numValidNeighbours = 0U;
+            for (int32_t yOffset = -features.spatialResampleRadius; yOffset <= features.spatialResampleRadius; yOffset++) {
+                for (int32_t xOffset = -features.spatialResampleRadius; xOffset <= features.spatialResampleRadius; xOffset++) {
+                    if (yOffset == 0 && xOffset == 0) { continue; } // Skip direct temporal predecessor
+
+                    // Verify neighbour is not out of bounds
+                    int neighbourY              = y + yOffset;
+                    int neighbourX              = x + xOffset;
+                    if (neighbourY < 0 || neighbourY >= windowResolution.y ||
+                        neighbourX < 0 || neighbourX >= windowResolution.x) { continue; }
+                    const Reservoir& neighbour  = previousFrameGridVal[neighbourY][neighbourX];
+
+                    // Check validity and heuristics if required
+                    if (!neighbour.isEmpty()) {
+                        if (features.undersamplingSpatialHeuristics) {
+                            float depthFracDiff     = std::abs(1.0f - (neighbour.cameraRay.t / current.cameraRay.t));
+                            float normalsDotProd    = glm::dot(neighbour.hitInfo.normal, current.hitInfo.normal);
+                            if (depthFracDiff < features.maxDepthDifference && normalsDotProd > maxDotProductDifference) { numValidNeighbours++; } 
+                        } else { numValidNeighbours++; }
+                    }
+                }
+            }
+            if (numValidNeighbours < features.minValidSpatialNeighbours) { continue; }
+
+            // Passed both checks, canonical generation not needed
+            canonicalMask[y][x] = false;
+        }
+    }
+    return canonicalMask;
+}
+
+ReservoirGrid genInitialSamples(uint32_t frameCount, std::optional<GridMask> generateCanonical,
+                                const Scene& scene, const Trackball& camera, const BvhInterface& bvh, const Screen& screen, const Features& features) {
     glm::ivec2 windowResolution = screen.resolution();
     int frameCountParity        = frameCount % 2U;
     ReservoirGrid initialSamples(windowResolution.y, std::vector<Reservoir>(windowResolution.x, Reservoir(features.numSamplesInReservoir)));
@@ -43,6 +91,9 @@ ReservoirGrid genInitialSamples(uint32_t frameCount,
                     case UndersamplingMode::NoCanonical:
                         intersectionOnly = true;
                         break;
+                    case UndersamplingMode::Mask:
+                        if (!generateCanonical.has_value()) { throw std::runtime_error("Attempted to use mask undersampling without providing mask"); }
+                        intersectionOnly = !generateCanonical.value()[y][x];
                 }
             }
 
@@ -135,7 +186,10 @@ ReservoirGrid renderRayTracing(std::shared_ptr<ReservoirGrid> previousFrameGrid,
                                const Scene& scene, const Trackball& camera,
                                const BvhInterface& bvh, Screen& screen,
                                const Features& features) {
-    ReservoirGrid reservoirGrid = genInitialSamples(frameCount, scene, camera, bvh, screen, features);
+    std::optional<GridMask> canonicalMask   = features.undersamplingMode == UndersamplingMode::Mask                     ?
+                                              std::make_optional(genCanonicalMask(previousFrameGrid, screen, features)) :
+                                              std::nullopt;
+    ReservoirGrid reservoirGrid             = genInitialSamples(frameCount, canonicalMask, scene, camera, bvh, screen, features);
     if (features.temporalReuse && previousFrameGrid)    { temporalReuse(reservoirGrid, *previousFrameGrid.get(), bvh, screen, features); }
     if (features.spatialReuse && previousFrameGrid)     { spatialReuse(reservoirGrid, *previousFrameGrid.get(), bvh, screen, features); }
 

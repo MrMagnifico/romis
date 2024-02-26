@@ -293,6 +293,7 @@ void UiManager::drawRestirFeaturesToggles() {
         ImGui::Checkbox("Use unbiased combination",             &config.features.unbiasedCombination);
         ImGui::Checkbox("Spatial reuse",                        &config.features.spatialReuse);
         ImGui::Checkbox("Spatial reuse - Visibility check",     &config.features.spatialReuseVisibilityCheck);
+        ImGui::Checkbox("Spatial reuse - Rejection heuristics", &config.features.spatialRejectionHeuristics);
         ImGui::Checkbox("Temporal reuse",                       &config.features.temporalReuse);
     }
 }
@@ -303,7 +304,7 @@ void UiManager::drawRestirParams() {
         ImGui::SliderInt("Canonical sample count",      (int*) &config.features.initialLightSamples,        1, 128);
         ImGui::SliderInt("Neighbours to sample",        (int*) &config.features.numNeighboursToSample,      1, 10);
         ImGui::SliderInt("Spatial resampling passes",   (int*) &config.features.spatialResamplingPasses,    1, 5);
-        ImGui::SliderInt("Spatial resample radius",     (int*) &config.features.spatialResampleRadius,      1, 30);
+        ImGui::SliderInt("Spatial resample radius",            &config.features.spatialResampleRadius,      1, 30);
         ImGui::SliderInt("Temporal M clamp",            (int*) &config.features.temporalClampM,             1, 40);
     }
 }
@@ -316,11 +317,13 @@ void UiManager::drawRestirUndersampling() {
         std::transform(std::begin(optionsUndersamplingMode), std::end(optionsUndersamplingMode), std::back_inserter(optionsUndersamplingModePointers),
             [](const auto& str) { return str.data(); });
 
-        ImGui::Checkbox("Use spatial rejection heuristics", &config.features.spatialRejectionHeuristics);
         ImGui::SliderInt("Rounds before canonical", (int*) &config.features.roundsBeforeCanonical, 1, 8);
         ImGui::Combo("Undersampling mode", (int*) &config.features.undersamplingMode, optionsUndersamplingModePointers.data(), static_cast<int>(optionsUndersamplingModePointers.size()));
         ImGui::DragFloat("Max depth difference (fraction)", &config.features.maxDepthDifference, 0.01f, 0.05f, 0.25f);
         ImGui::DragFloat("Max normal difference (degrees)", &config.features.maxNormalDifferenceDegrees, 10.0f, 1.0f, 90.0f);
+        ImGui::Checkbox("Require temporal predecessor", &config.features.mustHaveTemporalPredecessor);
+        ImGui::SliderInt("Min valid spatial neighbours", &config.features.minValidSpatialNeighbours, 0, 16);
+        ImGui::Checkbox("Spatial heuristics compliance", &config.features.undersamplingSpatialHeuristics);
     }
 }
 

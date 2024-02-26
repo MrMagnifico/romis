@@ -37,6 +37,10 @@ struct Reservoir {
     size_t numSamples   = 1ULL;                                 // Avoid division by zero issues
     float wSum          = std::numeric_limits<float>::min();    // Avoid division by zero issues
 
+    bool isEmpty() const;
+
+    void makeEmpty();
+
     void update(LightSample sample, float weight);
 
     /**

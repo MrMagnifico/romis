@@ -20,6 +20,18 @@ void Reservoir::update(LightSample sample, float weight) {
     }
 }
 
+bool Reservoir::isEmpty() const { return numSamples == 1ULL; }
+
+void Reservoir::makeEmpty() {
+    for (SampleData& outputSample : outputSamples) {
+        outputSample.lightSample.position   = glm::vec3(0.0f);
+        outputSample.lightSample.color      = glm::vec3(0.0f);
+        outputSample.outputWeight           = 0.0f;
+    }
+    numSamples  = 1ULL;
+    wSum        = std::numeric_limits<float>::min();
+}
+
 void Reservoir::combineBiased(const std::span<Reservoir>& reservoirStream, Reservoir& finalReservoir, const Features& features) {
     size_t totalSampleCount = 0ULL;
     for (const Reservoir& reservoir : reservoirStream) {
