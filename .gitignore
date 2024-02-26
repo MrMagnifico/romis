@@ -6,7 +6,6 @@
 *.slo
 *.lo
 *.o
-*.obj
 
 # Precompiled Headers
 *.gch
@@ -78,6 +77,5 @@ _deps
 
 ### Blobs ###
 /build
-/data
 /out
 assignment.html

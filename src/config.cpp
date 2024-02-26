@@ -42,22 +42,6 @@ static std::ostream& operator<<(std::ostream& os, const SceneType& sceneType)
         os << "SceneType::Monkey";
         break;
     }
-    case SceneType::Teapot: {
-        os << "SceneType::Teapot";
-        break;
-    }
-    case SceneType::Dragon: {
-        os << "SceneType::Dragon";
-        break;
-    }
-    case SceneType::Spheres: {
-        os << "SceneType::Spheres";
-        break;
-    }
-    case SceneType::Custom: {
-        os << "SceneType::Custom";
-        break;
-    }
     }
     return os;
 }
@@ -390,14 +374,6 @@ std::string serialize(const SceneType& sceneType)
         return "cornell_box_parallelogram_light";
     case SceneType::Monkey:
         return "monkey";
-    case SceneType::Teapot:
-        return "teapot";
-    case SceneType::Dragon:
-        return "dragon";
-    case SceneType::Spheres:
-        return "spheres";
-    case SceneType::Custom:
-        return "custom";
     default:
         return "unknown";
     }
@@ -419,14 +395,6 @@ std::optional<SceneType> deserialize(const std::string& sceneTypeStr)
         return SceneType::CornellBoxParallelogramLight;
     } else if (lowered == "monkey") {
         return SceneType::Monkey;
-    } else if (lowered == "teapot") {
-        return SceneType::Teapot;
-    } else if (lowered == "dragon") {
-        return SceneType::Dragon;
-    } else if (lowered == "spheres") {
-        return SceneType::Spheres;
-    } else if (lowered == "custom") {
-        return SceneType::Custom;
     } else {
         return std::nullopt;
     }

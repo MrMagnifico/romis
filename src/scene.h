@@ -20,10 +20,6 @@ enum SceneType {
     CornellBoxParallelogramLight,
     CornellNightClub,
     Monkey,
-    Teapot,
-    Dragon,
-    Spheres,
-    Custom,
 };
 
 struct Scene {
