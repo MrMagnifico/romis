@@ -26,7 +26,9 @@ struct SampleData {
 };
 
 struct Reservoir {
-    Reservoir(size_t numSamples) : outputSamples(numSamples) {}
+    Reservoir(size_t numSamples) : outputSamples(numSamples)
+                                 , sampleNums(numSamples, 1ULL)
+                                 , wSums(numSamples, std::numeric_limits<float>::min()) {}
 
     // Intersection position info
     Ray cameraRay;
@@ -34,10 +36,20 @@ struct Reservoir {
 
     // Light sampling
     std::vector<SampleData> outputSamples;   
-    size_t numSamples   = 1ULL;                                 // Avoid division by zero issues
-    float wSum          = std::numeric_limits<float>::min();    // Avoid division by zero issues
+    std::vector<size_t> sampleNums;
+    std::vector<float> wSums;
 
-    void update(LightSample sample, float weight);
+    /**
+     * Process the given sample for potential storage by a sub-reservoir
+     * 
+     * @param sample Light sample
+     * @param weight Selection weight of the sample
+     * 
+     * @return The index of the sub-reservoir which processed this sample
+    */
+    size_t update(LightSample sample, float weight);
+
+    size_t totalSampleNums() const;
 
     /**
      * Combine a number of reservoirs in a single final reservoir in a biased fashion (Algorithm 5 in ReSTIR paper)

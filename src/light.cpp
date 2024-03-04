@@ -60,8 +60,12 @@ Reservoir genCanonicalSamples(const Scene& scene, const BvhInterface& bvh, const
     glm::vec3 intersectionPosition  = ray.origin + (ray.t * ray.direction);
     glm::vec3 diffuseColor          = diffuseAlbedo(reservoir.hitInfo, features);
 
+    // Zero out cautionary one sample for zero division avoidance
+    for (size_t reservoirIdx = 0ULL; reservoirIdx < reservoir.outputSamples.size(); reservoirIdx++) {
+        reservoir.sampleNums[reservoirIdx] = 0ULL;
+    }
+    
     // Obtain initial light samples
-    reservoir.numSamples = 0ULL; // Zero out cautionary one sample for zero division avoidance
     for (uint32_t sampleIdx = 0U; sampleIdx < features.initialLightSamples; sampleIdx++) {
         // Generate sample
         LightSample sample;
@@ -84,14 +88,15 @@ Reservoir genCanonicalSamples(const Scene& scene, const BvhInterface& bvh, const
     }
 
     // Set output weight and do optional visibility check
-    for (SampleData& reservoirSample : reservoir.outputSamples) {
-        if (features.initialSamplesVisibilityCheck && !testVisibilityLightSample(reservoirSample.lightSample.position, bvh, features, ray, reservoir.hitInfo)) { reservoirSample.outputWeight = 0.0f; }
-        else {
-            float pdfValue = targetPDF(reservoirSample.lightSample, reservoir.cameraRay, reservoir.hitInfo, features);
-            if (pdfValue == 0.0f)   { reservoirSample.outputWeight  = 0.0f; }
-            else                    { reservoirSample.outputWeight  = (1.0f / pdfValue) * 
-                                                                      (1.0f / reservoir.numSamples) *
-                                                                      reservoir.wSum; }
+    for (size_t reservoirIdx = 0ULL; reservoirIdx < reservoir.outputSamples.size(); reservoirIdx++)  {
+        if (features.initialSamplesVisibilityCheck && !testVisibilityLightSample(reservoir.outputSamples[reservoirIdx].lightSample.position, bvh, features, ray, reservoir.hitInfo)) {
+            reservoir.outputSamples[reservoirIdx].outputWeight = 0.0f;
+        } else {
+            float pdfValue = targetPDF(reservoir.outputSamples[reservoirIdx].lightSample, reservoir.cameraRay, reservoir.hitInfo, features);
+            if (pdfValue == 0.0f)   { reservoir.outputSamples[reservoirIdx].outputWeight  = 0.0f; }
+            else                    { reservoir.outputSamples[reservoirIdx].outputWeight  = (1.0f / pdfValue) * 
+                                                                                            (1.0f / reservoir.sampleNums[reservoirIdx]) *
+                                                                                            reservoir.wSums[reservoirIdx]; }
         }
     }
     
