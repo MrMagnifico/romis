@@ -1,15 +1,16 @@
-#include "render.h"
-#include "intersect.h"
-#include "light.h"
-#include "screen.h"
-#include "tone_mapping.h"
-#include "utils.h"
 
 #include <framework/trackball.h>
 
 #ifdef NDEBUG
 #include <omp.h>
 #endif
+
+#include <post_processing/tone_mapping.h>
+#include <ray_tracing/intersect.h>
+#include <rendering/render.h>
+#include <rendering/screen.h>
+#include <scene/light.h>
+#include <utils/utils.h>
 
 #include <array>
 #include <iostream>

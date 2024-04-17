@@ -1,11 +1,11 @@
-#include "config.h"
-#include "draw.h"
-#include "light.h"
-#include "render.h"
-#include "reservoir.h"
-#include "screen.h"
-#include "ui.h"
-#include "utils.h"
+#include <scene/light.h>
+#include <rendering/render.h>
+#include <rendering/reservoir.h>
+#include <rendering/screen.h>
+#include <ui/draw.h>
+#include <ui/ui.h>
+#include <utils/config.h>
+#include <utils/utils.h>
 
 // Suppress warnings in third-party code.
 #include <framework/disable_all_warnings.h>

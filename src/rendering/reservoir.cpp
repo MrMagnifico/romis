@@ -1,12 +1,11 @@
-#include "reservoir.h"
-#include "shading.h"
-#include "utils.h"
-
 #include <framework/disable_all_warnings.h>
 DISABLE_WARNINGS_PUSH()
 #include <glm/glm.hpp>
 DISABLE_WARNINGS_POP()
 
+#include <rendering/reservoir.h>
+#include <rendering/shading.h>
+#include <utils/utils.h>
 
 size_t Reservoir::update(LightSample sample, float weight) {
     // Find reservoir with smallest weight sum

@@ -1,12 +1,13 @@
-#include "draw.h"
-#include "utils.h"
-#include "texture.h"
-
 #include <framework/disable_all_warnings.h>
 DISABLE_WARNINGS_PUSH()
 #include <glm/gtc/type_ptr.hpp>
 DISABLE_WARNINGS_POP()
+
 #include <framework/opengl_includes.h>
+
+#include <scene/texture.h>
+#include <ui/draw.h>
+#include <utils/utils.h>
 
 #include <cstdlib>
 

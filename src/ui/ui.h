@@ -2,12 +2,12 @@
 #ifndef _UI_H_
 #define _UI_H_
 
-#include "bvh_interface.h"
-#include "common.h"
-#include "config.h"
-#include "reservoir.h"
-#include "scene.h"
-#include "screen.h"
+#include <ray_tracing/bvh_interface.h>
+#include <rendering/reservoir.h>
+#include <rendering/screen.h>
+#include <scene/scene.h>
+#include <utils/common.h>
+#include <utils/config.h>
 
 #include <framework/trackball.h>
 

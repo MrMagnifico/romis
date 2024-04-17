@@ -1,6 +1,7 @@
 #pragma once
-#include "common.h"
 #include <framework/ray.h>
+
+#include <utils/common.h>
 
 constexpr float REFLECTION_EPSILON = 1E-3F;
 

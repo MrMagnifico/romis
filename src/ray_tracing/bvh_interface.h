@@ -1,5 +1,6 @@
 #pragma once
-#include "config.h"
+#include <utils/config.h>
+
 #include <array>
 #include <span>
 

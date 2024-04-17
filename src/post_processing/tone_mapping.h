@@ -2,7 +2,7 @@
 #ifndef _TONE_MAPPING_H_
 #define _TONE_MAPPING_H_
 
-#include "common.h"
+#include <utils/common.h>
 
 #include <framework/disable_all_warnings.h>
 DISABLE_WARNINGS_PUSH()

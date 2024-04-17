@@ -1,8 +1,11 @@
 #pragma once
-#include "scene.h"
+
 #include <framework/mesh.h>
 #include <framework/ray.h>
-#include <utility> // std::forward
+
+#include <scene/scene.h>
+
+#include <utility>
 
 // Flag to enable/disable the debug drawing.
 extern bool enableDebugDraw;

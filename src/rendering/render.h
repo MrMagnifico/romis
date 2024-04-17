@@ -4,8 +4,10 @@ DISABLE_WARNINGS_PUSH()
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/vec3.hpp>
 DISABLE_WARNINGS_POP()
+
 #include <framework/ray.h>
-#include <reservoir.h>
+
+#include <rendering/reservoir.h>
 
 // Forward declarations.
 struct Scene;

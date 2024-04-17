@@ -1,9 +1,10 @@
 #include "bounding_volume_hierarchy.h"
-#include "draw.h"
-#include "intersect.h"
-#include "scene.h"
-#include "texture.h"
-#include "interpolate.h"
+
+#include <ray_tracing/interpolate.h>
+#include <ray_tracing/intersect.h>
+#include <scene/scene.h>
+#include <scene/texture.h>
+#include <ui/draw.h>
 
 #include <algorithm>
 #include <glm/glm.hpp> 

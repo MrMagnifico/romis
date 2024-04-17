@@ -1,11 +1,11 @@
 #pragma once
-#include "bvh_interface.h"
-#include "config.h"
-#include "draw.h"
-#include "intersect.h"
-#include "reservoir.h"
-#include "scene.h"
-#include "shading.h"
+#include <ray_tracing/bvh_interface.h>
+#include <ray_tracing/intersect.h>
+#include <rendering/reservoir.h>
+#include <rendering/shading.h>
+#include <scene/scene.h>
+#include <ui/draw.h>
+#include <utils/config.h>
 
 constexpr glm::vec3 CAMERA_RAY_HIT_COLOR        = {0.0f, 1.0f, 0.0f};
 constexpr glm::vec3 CAMERA_RAY_NO_HIT_COLOR     = {1.0f, 0.0f, 0.0f};

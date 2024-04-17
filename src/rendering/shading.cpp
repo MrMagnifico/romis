@@ -1,5 +1,5 @@
-#include "shading.h"
-#include "utils.h"
+#include <rendering/shading.h>
+#include <utils/utils.h>
 
 #include <cmath>
 #include <glm/geometric.hpp>

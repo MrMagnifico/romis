@@ -1,7 +1,8 @@
 #pragma once
 
-#include "common.h"
 #include <framework/ray.h>
+
+#include <utils/common.h>
 
 #include <array>
 #include <span>

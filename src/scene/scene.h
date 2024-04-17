@@ -1,16 +1,19 @@
 #pragma once
-// Suppress warnings in third-party code.
+
+#include <framework/mesh.h>
+#include <framework/ray.h>
+
 #include <framework/disable_all_warnings.h>
 DISABLE_WARNINGS_PUSH()
 #include <glm/vec3.hpp>
 DISABLE_WARNINGS_POP()
+
+#include <utils/common.h>
+
 #include <filesystem>
-#include <framework/mesh.h>
-#include <framework/ray.h>
 #include <optional>
 #include <variant>
 #include <vector>
-#include "common.h"
 
 enum SceneType {
     SingleTriangle,

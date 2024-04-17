@@ -1,12 +1,11 @@
 #include "config.h"
-#include "scene.h"
 
 DISABLE_WARNINGS_PUSH()
 #define TOML_EXCEPTIONS 0
-
 #include <toml/toml.hpp>
-
 DISABLE_WARNINGS_POP()
+
+#include <scene/scene.h>
 
 #include <algorithm>
 #include <cctype>
@@ -40,6 +39,10 @@ static std::ostream& operator<<(std::ostream& os, const SceneType& sceneType)
     }
     case SceneType::Monkey: {
         os << "SceneType::Monkey";
+        break;
+    }
+    case SceneType::CornellNightClub: {
+        os << "SceneType::CornellNightClub";
         break;
     }
     }

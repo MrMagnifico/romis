@@ -2,8 +2,8 @@
 #ifndef _UTILS_HPP_
 #define _UTILS_HPP_
 
-#include "bvh_interface.h"
-#include "common.h"
+#include <ray_tracing/bvh_interface.h>
+#include <utils/common.h>
 
 #include <framework/disable_all_warnings.h>
 DISABLE_WARNINGS_PUSH()

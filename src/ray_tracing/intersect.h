@@ -1,6 +1,7 @@
 #pragma once
-#include "common.h"
 #include <framework/ray.h>
+
+#include <utils/common.h>
 
 Plane trianglePlane(const glm::vec3& v0, const glm::vec3& v1, const glm::vec3& v2);
 bool intersectRayWithPlane(const Plane& plane, Ray& ray);

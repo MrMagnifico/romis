@@ -1,13 +1,14 @@
-#include "interpolate.h"
-#include "intersect.h"
-#include "utils.h"
-// Suppress warnings in third-party code.
 #include <framework/disable_all_warnings.h>
 DISABLE_WARNINGS_PUSH()
 #include <glm/geometric.hpp>
 #include <glm/gtx/component_wise.hpp>
 #include <glm/vector_relational.hpp>
 DISABLE_WARNINGS_POP()
+
+#include <ray_tracing/interpolate.h>
+#include <ray_tracing/intersect.h>
+#include <utils/utils.h>
+
 #include <cmath>
 #include <limits>
 
