@@ -51,7 +51,6 @@ Reservoir genCanonicalSamples(const Scene& scene, const BvhInterface& bvh, const
     }
 
     // Uniform selection of light sources
-    // TODO: Figure out better solution than uniform sampling (fuck you, point lights)
     std::random_device rd;
     std::mt19937 gen(rd());
     std::uniform_int_distribution<> distr(0, scene.lights.size() - 1UL);

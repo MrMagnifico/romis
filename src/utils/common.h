@@ -13,7 +13,8 @@ enum class DrawMode {
 
 enum class ViewMode {
     Rasterization = 0,
-    RayTracing = 1
+    ReSTIR,
+    OMIS
 };
 
 struct HitInfo {

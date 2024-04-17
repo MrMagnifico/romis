@@ -36,6 +36,19 @@ ReservoirGrid genInitialSamples(const Scene& scene, const Trackball& camera, con
     return initialSamples;
 }
 
+glm::vec3 finalShading(const Reservoir& reservoir, const Ray& primaryRay, const BvhInterface& bvh, const Features& features) {
+    glm::vec3 finalColor(0.0f);
+    for (const SampleData& sample : reservoir.outputSamples) {
+        glm::vec3 sampleColor   = testVisibilityLightSample(sample.lightSample.position, bvh, features, primaryRay, reservoir.hitInfo)              ?
+                                  computeShading(sample.lightSample.position, sample.lightSample.color, features, primaryRay, reservoir.hitInfo)    :
+                                  glm::vec3(0.0f);
+        sampleColor             *= sample.outputWeight;
+        finalColor              += sampleColor;
+    }
+    finalColor /= reservoir.outputSamples.size(); // Divide final shading value by number of samples
+    return finalColor;
+}
+
 void spatialReuse(ReservoirGrid& reservoirGrid, const BvhInterface& bvh, const Screen& screen, const Features& features) {
     // Uniform selection of neighbours in N pixel Manhattan distance radius
     std::random_device rd;
@@ -86,7 +99,7 @@ void spatialReuse(ReservoirGrid& reservoirGrid, const BvhInterface& bvh, const S
 }
 
 void temporalReuse(ReservoirGrid& reservoirGrid, ReservoirGrid& previousFrameGrid, const BvhInterface& bvh,
-                   Screen& screen, const glm::vec2 motionVector, const Features& features) {
+                   Screen& screen, const Features& features) {
     glm::ivec2 windowResolution = screen.resolution();
     #ifdef NDEBUG
     #pragma omp parallel for schedule(guided)
@@ -116,12 +129,12 @@ void temporalReuse(ReservoirGrid& reservoirGrid, ReservoirGrid& previousFrameGri
     }
 }
 
-ReservoirGrid renderRayTracing(std::shared_ptr<ReservoirGrid> previousFrameGrid,
-                               const Scene& scene, const Trackball& camera,
-                               const BvhInterface& bvh, Screen& screen,
-                               const glm::vec2 motionVector, const Features& features) {
+ReservoirGrid renderReSTIR(std::shared_ptr<ReservoirGrid> previousFrameGrid,
+                           const Scene& scene, const Trackball& camera,
+                           const BvhInterface& bvh, Screen& screen,
+                           const Features& features) {
     ReservoirGrid reservoirGrid = genInitialSamples(scene, camera, bvh, screen, features);
-    if (features.temporalReuse && previousFrameGrid)    { temporalReuse(reservoirGrid, *previousFrameGrid.get(), bvh, screen, motionVector, features); }
+    if (features.temporalReuse && previousFrameGrid)    { temporalReuse(reservoirGrid, *previousFrameGrid.get(), bvh, screen, features); }
     if (features.spatialReuse)                          { spatialReuse(reservoirGrid, bvh, screen, features); }
 
     // Final shading
@@ -132,16 +145,8 @@ ReservoirGrid renderRayTracing(std::shared_ptr<ReservoirGrid> previousFrameGrid,
     for (int y = 0; y < windowResolution.y; y++) {
         for (int x = 0; x != windowResolution.x; x++) {
             // Compute shading from final sample(s)
-            glm::vec3 finalColor(0.0f);
-            const Reservoir& reservoir = reservoirGrid[y][x];
-            for (const SampleData& sample : reservoir.outputSamples) {
-                glm::vec3 sampleColor   = testVisibilityLightSample(sample.lightSample.position, bvh, features, reservoir.cameraRay, reservoir.hitInfo)             ?
-                                          computeShading(sample.lightSample.position, sample.lightSample.color, features, reservoir.cameraRay, reservoir.hitInfo)   :
-                                          glm::vec3(0.0f);
-                sampleColor             *= sample.outputWeight;
-                finalColor              += sampleColor;
-            }
-            finalColor /= reservoir.outputSamples.size(); // Divide final shading value by number of samples
+            const Reservoir& reservoir  = reservoirGrid[y][x];
+            glm::vec3 finalColor        = finalShading(reservoir, reservoir.cameraRay, bvh, features);
 
             // Apply tone mapping and set final pixel color
             if (features.enableToneMapping) { finalColor = exposureToneMapping(finalColor, features); }
@@ -151,4 +156,33 @@ ReservoirGrid renderRayTracing(std::shared_ptr<ReservoirGrid> previousFrameGrid,
 
     // Return current frame's final grid for temporal reuse
     return reservoirGrid;
+}
+
+void renderRMIS(const Scene& scene, const Trackball& camera, const BvhInterface& bvh, Screen& screen, const Features& features) {
+    ReservoirGrid reservoirGrid = genInitialSamples(scene, camera, bvh, screen, features);
+    glm::ivec2 windowResolution = screen.resolution();
+
+    #ifdef NDEBUG
+    #pragma omp parallel for schedule(guided)
+    #endif
+    for (int y = 0; y < windowResolution.y; y++) {
+        for (int x = 0; x != windowResolution.x; x++) {
+            const Ray& primaryRay = reservoirGrid[y][x].cameraRay;
+
+            // Combine samples from all pixels in 3x3 neighborhood
+            glm::vec3 finalColor(0.0f);
+            for (int sampleY = y - 1; sampleY <= y + 1; sampleY++) {
+                for (int sampleX = x - 1; sampleX <= x + 1; sampleX++) {
+                    int neighbourY  = std::clamp(sampleY, 0, windowResolution.y - 1);
+                    int neighbourX  = std::clamp(sampleX, 0, windowResolution.x - 1);
+                    finalColor += finalShading(reservoirGrid[neighbourY][neighbourX], primaryRay, bvh, features);    
+                }
+            }
+            finalColor *= (1.0f / 9.0f); // TODO: Change to actual OMIS MIS weights
+
+            // Apply tone mapping and set final pixel color
+            if (features.enableToneMapping) { finalColor = exposureToneMapping(finalColor, features); }
+            screen.setPixel(x, y, finalColor);
+        }
+    }
 }

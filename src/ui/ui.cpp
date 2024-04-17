@@ -117,7 +117,7 @@ void UiManager::drawSceneSelection() {
 }
 
 void UiManager::drawViewModeSelection() {
-    constexpr std::array items { "Rasterization", "Ray Traced" };
+    constexpr std::array items { "Rasterization", "ReSTIR", "OMIS" };
     ImGui::Combo("View mode", reinterpret_cast<int*>(&viewMode), items.data(), int(items.size()));
 }
 
@@ -173,7 +173,7 @@ void UiManager::drawRenderToFile() {
             // Perform a new render and measure the time it took to generate the image.
             using clock         = std::chrono::high_resolution_clock;
             const auto start    = clock::now();
-            previousFrameGrid   = std::make_shared<ReservoirGrid>(renderRayTracing(previousFrameGrid, scene, camera, bvh, screen, camera.getLastDelta(), config.features));
+            renderRMIS(scene, camera, bvh, screen, config.features);
             const auto end      = clock::now();
             std::cout << "Time to render image: " << std::chrono::duration<float, std::milli>(end - start).count() << " milliseconds" << std::endl;
             

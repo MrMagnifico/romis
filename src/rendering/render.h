@@ -16,15 +16,20 @@ class Trackball;
 class BvhInterface;
 struct Features;
 
+// Common
 ReservoirGrid genInitialSamples(const Scene& scene, const Trackball& camera, const BvhInterface& bvh, const Screen& screen, const Features& features);
+glm::vec3 finalShading(const Reservoir& reservoir, const Ray& primaryRay, const BvhInterface& bvh, const Features& features);
 
+// ReSTIR-specific
 void spatialReuse(ReservoirGrid& reservoirGrid, const BvhInterface& bvh, const Screen& screen, const Features& features);
-
 void temporalReuse(ReservoirGrid& reservoirGrid, ReservoirGrid& previousFrameGrid, const BvhInterface& bvh,
-                   Screen& screen, const glm::vec2 motionVector, const Features& features);
+                   Screen& screen, const Features& features);
 
-// Main rendering function.
-ReservoirGrid renderRayTracing(std::shared_ptr<ReservoirGrid> previousFrameGrid,
-                               const Scene& scene, const Trackball& camera,
-                               const BvhInterface& bvh, Screen& screen,
-                               const glm::vec2 motionVector, const Features& features);
+// Render using ReSTIR
+ReservoirGrid renderReSTIR(std::shared_ptr<ReservoirGrid> previousFrameGrid,
+                           const Scene& scene, const Trackball& camera,
+                           const BvhInterface& bvh, Screen& screen,
+                           const Features& features);
+
+// Render using R-MIS
+void renderRMIS(const Scene& scene, const Trackball& camera, const BvhInterface& bvh, Screen& screen, const Features& features);
