@@ -11,6 +11,7 @@ DISABLE_WARNINGS_POP()
 #include <framework/variant_helper.h>
 
 #include <rendering/render.h>
+#include <utils/magic_enum.hpp>
 #include <utils/utils.h>
 
 #include <array>
@@ -117,8 +118,11 @@ void UiManager::drawSceneSelection() {
 }
 
 void UiManager::drawViewModeSelection() {
-    constexpr std::array items { "Rasterization", "ReSTIR", "OMIS" };
-    ImGui::Combo("View mode", reinterpret_cast<int*>(&viewMode), items.data(), int(items.size()));
+    constexpr auto viewModes = magic_enum::enum_names<ViewMode>();
+    std::vector<const char*> viewModesPointers;
+    std::transform(std::begin(viewModes), std::end(viewModes), std::back_inserter(viewModesPointers),
+                   [](const auto& str) { return str.data(); });
+    ImGui::Combo("Render mode", (int*) &viewMode, viewModesPointers.data(), static_cast<int>(viewModesPointers.size()));
 }
 
 void UiManager::drawFeaturesToggles() {
@@ -296,6 +300,12 @@ void UiManager::drawRestirFeaturesToggles() {
 
 void UiManager::drawRestirParams() {
     if (ImGui::CollapsingHeader("Parameters", ImGuiTreeNodeFlags_DefaultOpen)) {
+        constexpr auto misWeights = magic_enum::enum_names<MISWeightRMIS>();
+        std::vector<const char*> misWeightPointers;
+        std::transform(std::begin(misWeights), std::end(misWeights), std::back_inserter(misWeightPointers),
+                       [](const auto& str) { return str.data(); });
+        ImGui::Combo("MIS weights (R-MIS)", (int*) &config.features.misWeightRMIS, misWeightPointers.data(), static_cast<int>(misWeightPointers.size()));
+
         ImGui::SliderInt("Samples per reservoir",       (int*) &config.features.numSamplesInReservoir,      1, 16);
         ImGui::SliderInt("Canonical sample count",      (int*) &config.features.initialLightSamples,        1, 128);
         ImGui::SliderInt("Neighbours to sample",        (int*) &config.features.numNeighboursToSample,      1, 10);

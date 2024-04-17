@@ -17,6 +17,11 @@ enum class ViewMode {
     OMIS
 };
 
+enum class MISWeightRMIS {
+    Equal = 0,
+    Balance
+};
+
 struct HitInfo {
     glm::vec3 normal;
     glm::vec3 barycentricCoord;
@@ -83,16 +88,21 @@ struct Features {
     // Base render parameters
     uint32_t maxReflectionRecursion = 5U;
 
-    // ReSTIR feature flags
+    // Shared R-MIS/ReSTIR feature flag(s) and parameter(s)
     bool initialSamplesVisibilityCheck  = false;
+    uint32_t numSamplesInReservoir      = 1U;
+    uint32_t initialLightSamples        = 32U;
+
+    // R-MIS parameter(s)
+    MISWeightRMIS misWeightRMIS = MISWeightRMIS::Equal;
+
+    // ReSTIR feature flags
     bool unbiasedCombination            = false;
     bool spatialReuse                   = true;
     bool spatialReuseVisibilityCheck    = false;
     bool temporalReuse                  = true;
 
     // ReSTIR parameters
-    uint32_t numSamplesInReservoir      = 1U;
-    uint32_t initialLightSamples        = 32U;
     uint32_t numNeighboursToSample      = 5U;
     uint32_t spatialResamplingPasses    = 2U;
     uint32_t spatialResampleRadius      = 10U;

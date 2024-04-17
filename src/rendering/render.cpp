@@ -10,6 +10,7 @@
 #include <rendering/render.h>
 #include <rendering/screen.h>
 #include <scene/light.h>
+#include <utils/magic_enum.hpp>
 #include <utils/utils.h>
 
 #include <array>
@@ -53,7 +54,7 @@ void spatialReuse(ReservoirGrid& reservoirGrid, const BvhInterface& bvh, const S
     // Uniform selection of neighbours in N pixel Manhattan distance radius
     std::random_device rd;
     std::mt19937 gen(rd());
-    std::uniform_int_distribution<> distr(-features.spatialResampleRadius, features.spatialResampleRadius);
+    std::uniform_int_distribution<> distr(-static_cast<int32_t>(features.spatialResampleRadius), features.spatialResampleRadius);
 
     glm::ivec2 windowResolution = screen.resolution();
     ReservoirGrid prevIteration = reservoirGrid;
@@ -129,6 +130,16 @@ void temporalReuse(ReservoirGrid& reservoirGrid, ReservoirGrid& previousFrameGri
     }
 }
 
+float generalisedBalanceHeuristic(const LightSample& sample, const std::vector<Reservoir>& allPixels,
+                                  const Ray& primaryRay, const HitInfo& primaryHitInfo,
+                                  const Features& features) {
+    // Redundant computation in denominator, but sufficient for a quick and dirty prototype
+    float numerator     = targetPDF(sample, primaryRay, primaryHitInfo, features);
+    float denominator   = std::numeric_limits<float>::min();
+    for (const Reservoir& pixel : allPixels) { denominator += targetPDF(sample, pixel.cameraRay, pixel.hitInfo, features); }
+    return numerator / denominator;
+}
+
 ReservoirGrid renderReSTIR(std::shared_ptr<ReservoirGrid> previousFrameGrid,
                            const Scene& scene, const Trackball& camera,
                            const BvhInterface& bvh, Screen& screen,
@@ -167,18 +178,40 @@ void renderRMIS(const Scene& scene, const Trackball& camera, const BvhInterface&
     #endif
     for (int y = 0; y < windowResolution.y; y++) {
         for (int x = 0; x != windowResolution.x; x++) {
-            const Ray& primaryRay = reservoirGrid[y][x].cameraRay;
+            // Collect primary ray info
+            const Ray& primaryRay           = reservoirGrid[y][x].cameraRay;
+            const HitInfo& primaryHitInfo   = reservoirGrid[y][x].hitInfo;
 
-            // Combine samples from all pixels in 3x3 neighborhood
-            glm::vec3 finalColor(0.0f);
+            // Gather samples from all pixels in 3x3 neighborhood
+            std::vector<Reservoir> neighborhood;
+            neighborhood.reserve(9);
             for (int sampleY = y - 1; sampleY <= y + 1; sampleY++) {
                 for (int sampleX = x - 1; sampleX <= x + 1; sampleX++) {
-                    int neighbourY  = std::clamp(sampleY, 0, windowResolution.y - 1);
-                    int neighbourX  = std::clamp(sampleX, 0, windowResolution.x - 1);
-                    finalColor += finalShading(reservoirGrid[neighbourY][neighbourX], primaryRay, bvh, features);    
+                    if (sampleY < 0 || windowResolution.y <= sampleY ||
+                        sampleX < 0 || windowResolution.x <= sampleX) { continue; }
+                    neighborhood.push_back(reservoirGrid[sampleY][sampleX]);
                 }
             }
-            finalColor *= (1.0f / 9.0f); // TODO: Change to actual OMIS MIS weights
+
+            // Combine shading results from all gathered pixels
+            glm::vec3 finalColor(0.0f);
+            for (const Reservoir& pixel : neighborhood) {
+                for (const SampleData& sample : pixel.outputSamples) {
+                    // Compute MIS weight
+                    float misWeight;
+                    switch (features.misWeightRMIS) {
+                        case MISWeightRMIS::Equal:      { misWeight = 1.0f / neighborhood.size(); } break;
+                        case MISWeightRMIS::Balance:    { misWeight = generalisedBalanceHeuristic(sample.lightSample, neighborhood, primaryRay, primaryHitInfo, features); } break;
+                        default:                        { throw std::runtime_error(std::format("Unhandled MIS weight type: {}", magic_enum::enum_name<MISWeightRMIS>(features.misWeightRMIS))); }
+                    }
+
+                    // Evaluate sample contribution
+                    glm::vec3 sampleColor   = testVisibilityLightSample(sample.lightSample.position, bvh, features, primaryRay, primaryHitInfo)             ?
+                                              computeShading(sample.lightSample.position, sample.lightSample.color, features, primaryRay, primaryHitInfo)   :
+                                              glm::vec3(0.0f);
+                    finalColor              += (misWeight * sampleColor * sample.outputWeight) / glm::vec3(static_cast<float>(pixel.outputSamples.size()));
+                }
+            }
 
             // Apply tone mapping and set final pixel color
             if (features.enableToneMapping) { finalColor = exposureToneMapping(finalColor, features); }
