@@ -52,10 +52,10 @@ private:
     void drawBvhDebug();
     void drawLightControls();
 
-    // ReSTIR UI bits
-    void drawRestirTab();
-    void drawRestirFeaturesToggles();
-    void drawRestirParams();
+    // Ray-tracing UI bits
+    void drawRayTracingTab();
+    void drawRayTracingFeaturesToggles();
+    void drawRayTracingParams();
 
     // Misc UI bits
     void drawMiscTab();

@@ -7,6 +7,7 @@ target_sources(CGFinProjLib
         "${CMAKE_CURRENT_LIST_DIR}/ray_tracing/interpolate.cpp"
         "${CMAKE_CURRENT_LIST_DIR}/ray_tracing/intersect.cpp"
         
+        "${CMAKE_CURRENT_LIST_DIR}/rendering/render_utils.cpp"
         "${CMAKE_CURRENT_LIST_DIR}/rendering/render.cpp"
         "${CMAKE_CURRENT_LIST_DIR}/rendering/reservoir.cpp"
         "${CMAKE_CURRENT_LIST_DIR}/rendering/screen.cpp"

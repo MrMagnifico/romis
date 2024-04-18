@@ -95,7 +95,7 @@ int main(int argc, char** argv) {
                         break;
                     }
                     case GLFW_KEY_M: { // Change render mode and reset temporal predecessor
-                        viewMode = viewMode == ViewMode::Rasterization ? ViewMode::ReSTIR : ViewMode::Rasterization;
+                        viewMode = viewMode == ViewMode::Rasterization ? ViewMode::RayTraced : ViewMode::Rasterization;
                         previousFrameGrid.reset();
                         break;
                     }
@@ -160,14 +160,15 @@ int main(int argc, char** argv) {
                         glPopAttrib();
                     }
                 } break;
-                case ViewMode::ReSTIR: {
-                    const auto start    = std::chrono::high_resolution_clock::now();
+                case ViewMode::RayTraced: {
+                    const auto start                        = std::chrono::high_resolution_clock::now();
                     screen.clear(glm::vec3(0.0f));
-                    previousFrameGrid   = make_shared<ReservoirGrid>(renderReSTIR(previousFrameGrid, scene, camera, bvh, screen, config.features));
+                    std::optional<ReservoirGrid> maybeGrid  = renderRayTraced(previousFrameGrid, scene, camera, bvh, screen, config.features);
+                    if (maybeGrid) { previousFrameGrid      = std::make_shared<ReservoirGrid>(maybeGrid.value()); }
                     screen.setPixel(0, 0, glm::vec3(1.0f));
                     screen.draw(); // Takes the image generated using ray tracing and outputs it to the screen using OpenGL.
-                    const auto end      = std::chrono::high_resolution_clock::now();
-                    const auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+                    const auto end                          = std::chrono::high_resolution_clock::now();
+                    const auto duration                     = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
                     fmt::print("Render time: {}ms\n", duration);
                 } break;
                 default:
@@ -218,9 +219,10 @@ int main(int argc, char** argv) {
                 screen.clear(glm::vec3(0.0f));
                 Trackball camera { &window, glm::radians(cameraConfig.fieldOfView), cameraConfig.distanceFromLookAt };
                 camera.setCamera(cameraConfig.lookAt, glm::radians(cameraConfig.rotation), cameraConfig.distanceFromLookAt);
-                previousFrameGrid           = make_shared<ReservoirGrid>(renderReSTIR(previousFrameGrid, scene, camera, bvh, screen, config.features));
-                const auto filename_base    = fmt::format("{}_{}_cam_{}", sceneName, start_time_string, index);
-                const auto filepath         = config.outputDir / (filename_base + ".bmp");
+                std::optional<ReservoirGrid> maybeGrid  = renderRayTraced(previousFrameGrid, scene, camera, bvh, screen, config.features);
+                if (maybeGrid) { previousFrameGrid      = std::make_shared<ReservoirGrid>(maybeGrid.value()); }
+                const auto filename_base                = fmt::format("{}_{}_cam_{}", sceneName, start_time_string, index);
+                const auto filepath                     = config.outputDir / (filename_base + ".bmp");
                 fmt::print("Image {} saved to {}\n", index, filepath.string());
                 screen.writeBitmapToFile(filepath);
             },

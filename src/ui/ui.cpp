@@ -44,8 +44,8 @@ UiManager::UiManager(BvhInterface& bvh, Trackball& camera, Config& config, std::
 void UiManager::draw() {
     ImGui::Begin("Seminar Implementation");
     ImGui::BeginTabBar("Options");
-    if (ImGui::BeginTabItem("ReSTIR")) {
-        drawRestirTab();
+    if (ImGui::BeginTabItem("Ray Tracing")) {
+        drawRayTracingTab();
         ImGui::EndTabItem();
     }
     if (ImGui::BeginTabItem("General")) {
@@ -80,11 +80,11 @@ void UiManager::drawProjectTab() {
     drawLightControls();
 }
 
-void UiManager::drawRestirTab() {
-    drawRestirFeaturesToggles();
+void UiManager::drawRayTracingTab() {
+    drawRayTracingFeaturesToggles();
     ImGui::Spacing();
     ImGui::Separator();
-    drawRestirParams();
+    drawRayTracingParams();
 }
 
 void UiManager::drawMiscTab() {
@@ -175,10 +175,11 @@ void UiManager::drawRenderToFile() {
             outPath.replace_extension("bmp");   // Make sure that the file extension is *.bmp
 
             // Perform a new render and measure the time it took to generate the image.
-            using clock         = std::chrono::high_resolution_clock;
-            const auto start    = clock::now();
-            renderROMIS(scene, camera, bvh, screen, config.features);
-            const auto end      = clock::now();
+            using clock                             = std::chrono::high_resolution_clock;
+            const auto start                        = clock::now();
+            std::optional<ReservoirGrid> maybeGrid  = renderRayTraced(previousFrameGrid, scene, camera, bvh, screen, config.features);
+            if (maybeGrid) { previousFrameGrid      = std::make_shared<ReservoirGrid>(maybeGrid.value()); }
+            const auto end                          = clock::now();
             std::cout << "Time to render image: " << std::chrono::duration<float, std::milli>(end - start).count() << " milliseconds" << std::endl;
             
             // Store the new image
@@ -288,9 +289,15 @@ void UiManager::drawLightControls() {
     }
 }
 
-void UiManager::drawRestirFeaturesToggles() {
+void UiManager::drawRayTracingFeaturesToggles() {
     if (ImGui::CollapsingHeader("Features", ImGuiTreeNodeFlags_DefaultOpen)) {
+        ImGui::Text("Common");
         ImGui::Checkbox("Initial samples - Visibility check",   &config.features.initialSamplesVisibilityCheck);
+
+        ImGui::Spacing();
+        ImGui::Separator();
+
+        ImGui::Text("ReSTIR");
         ImGui::Checkbox("Use unbiased combination",             &config.features.unbiasedCombination);
         ImGui::Checkbox("Spatial reuse",                        &config.features.spatialReuse);
         ImGui::Checkbox("Spatial reuse - Visibility check",     &config.features.spatialReuseVisibilityCheck);
@@ -298,8 +305,17 @@ void UiManager::drawRestirFeaturesToggles() {
     }
 }
 
-void UiManager::drawRestirParams() {
+void UiManager::drawRayTracingParams() {
     if (ImGui::CollapsingHeader("Parameters", ImGuiTreeNodeFlags_DefaultOpen)) {
+        // Mode selection
+        constexpr auto rayTraceModes = magic_enum::enum_names<RayTraceMode>();
+        std::vector<const char*> rayTraceModesPointers;
+        std::transform(std::begin(rayTraceModes), std::end(rayTraceModes), std::back_inserter(rayTraceModesPointers),
+                       [](const auto& str) { return str.data(); });
+        ImGui::Combo("Ray tracing mode", (int*) &config.features.rayTraceMode, rayTraceModesPointers.data(), static_cast<int>(rayTraceModesPointers.size()));
+        ImGui::Spacing();
+
+        // Common parameters
         ImGui::Text("Common");
         ImGui::SliderInt("Samples per reservoir",   (int*) &config.features.numSamplesInReservoir,      1, 16);
         ImGui::SliderInt("Canonical sample count",  (int*) &config.features.initialLightSamples,        1, 128);
@@ -307,17 +323,19 @@ void UiManager::drawRestirParams() {
         ImGui::Spacing();
         ImGui::Separator();
 
+        // R-MIS/R-OMIS parameters
         ImGui::Text("R-MIS / R-OMIS");
+        ImGui::SliderInt("Max iterations",  (int*) &config.features.maxIterationsRMIS, 1, 10);
         constexpr auto misWeights = magic_enum::enum_names<MISWeightRMIS>();
         std::vector<const char*> misWeightPointers;
         std::transform(std::begin(misWeights), std::end(misWeights), std::back_inserter(misWeightPointers),
                        [](const auto& str) { return str.data(); });
         ImGui::Combo("MIS weights (R-MIS)", (int*) &config.features.misWeightRMIS, misWeightPointers.data(), static_cast<int>(misWeightPointers.size()));
-        ImGui::SliderInt("Max iterations (R-OMIS)",  (int*) &config.features.maxIterationsROMIS, 1, 10);
 
         ImGui::Spacing();
         ImGui::Separator();
 
+        // ReSTIR parameters
         ImGui::Text("ReSTIR");
         ImGui::SliderInt("Neighbours to sample",        (int*) &config.features.numNeighboursToSample,      1, 10);
         ImGui::SliderInt("Spatial resampling passes",   (int*) &config.features.spatialResamplingPasses,    1, 5);

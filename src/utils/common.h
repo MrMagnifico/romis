@@ -13,8 +13,13 @@ enum class DrawMode {
 
 enum class ViewMode {
     Rasterization = 0,
-    ReSTIR,
-    OMIS
+    RayTraced
+};
+
+enum class RayTraceMode {
+    ReSTIR = 0,
+    RMIS,
+    ROMIS
 };
 
 enum class MISWeightRMIS {
@@ -89,13 +94,14 @@ struct Features {
     uint32_t maxReflectionRecursion = 5U;
 
     // Shared R-MIS/ReSTIR feature flag(s) and parameter(s)
+    RayTraceMode rayTraceMode           = RayTraceMode::ROMIS;
     bool initialSamplesVisibilityCheck  = false;
     uint32_t numSamplesInReservoir      = 1U;
     uint32_t initialLightSamples        = 32U;
 
-    // R-MIS parameter(s)
+    // R-MIS/R-OMIS parameter(s)
+    uint32_t maxIterationsRMIS  = 1U;
     MISWeightRMIS misWeightRMIS = MISWeightRMIS::Equal;
-    uint32_t maxIterationsROMIS = 1U;
 
     // ReSTIR feature flags
     bool unbiasedCombination            = false;
