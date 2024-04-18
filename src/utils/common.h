@@ -95,7 +95,7 @@ struct Features {
 
     // R-MIS parameter(s)
     MISWeightRMIS misWeightRMIS = MISWeightRMIS::Equal;
-    uint32_t maxIterationsROMIS = 2U;
+    uint32_t maxIterationsROMIS = 1U;
 
     // ReSTIR feature flags
     bool unbiasedCombination            = false;

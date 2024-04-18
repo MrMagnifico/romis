@@ -151,10 +151,10 @@ float arbitraryUnbiasedContributionWeightReciprocal(const LightSample& sample, c
     if (targetPdfValue == 0.0f) { return 0.0f; } // If target function value is zero, theoretical normalised PDF would also be zero
 
     // Compute mock unbiased contribution weight
-    float mockSampleWeight  = (1.0f / static_cast<float>(features.initialLightSamples)) * // Samples initially generated
-                              targetPdfValue *
+    float mockSampleWeight  = targetPdfValue *
                               (1.0f / scene.lights.size()); // Samples all generated via uniform light sampling, so equal original PDF
     float arbitraryWeight   = (1.0f / targetPdfValue) *
+                              (1.0f / pixel.sampleNums[sampleIdx]) * // Account for MIS weights in unbiased contribution because that's how it is in the rest of the codebas
                               (pixel.wSums[sampleIdx] - pixel.chosenSampleWeights[sampleIdx] + mockSampleWeight); // Emulate replacing weight of chosen sample with the given sample
     return (1.0f / arbitraryWeight);
 }
@@ -248,10 +248,10 @@ void renderRMIS(const Scene& scene, const Trackball& camera, const BvhInterface&
 void renderROMIS(const Scene& scene, const Trackball& camera, const BvhInterface& bvh, Screen& screen, const Features& features) {
     constexpr int32_t TOTAL_NEIGHBOURS = 9; // TODO: Make this adjustable
     glm::ivec2 windowResolution = screen.resolution();
-    MatrixGrid techniqueMatrices(windowResolution.y,        std::vector<Eigen::MatrixXf>(windowResolution.x, Eigen::MatrixXf(TOTAL_NEIGHBOURS, TOTAL_NEIGHBOURS)));
-    VectorGrid contributionVectorsRed(windowResolution.y,   std::vector<Eigen::VectorXf>(windowResolution.x, Eigen::VectorXf(TOTAL_NEIGHBOURS)));
-    VectorGrid contributionVectorsGreen(windowResolution.y, std::vector<Eigen::VectorXf>(windowResolution.x, Eigen::VectorXf(TOTAL_NEIGHBOURS)));
-    VectorGrid contributionVectorsBlue(windowResolution.y,  std::vector<Eigen::VectorXf>(windowResolution.x, Eigen::VectorXf(TOTAL_NEIGHBOURS)));
+    MatrixGrid techniqueMatrices(windowResolution.y,        std::vector<Eigen::MatrixXf>(windowResolution.x, Eigen::MatrixXf::Zero(TOTAL_NEIGHBOURS, TOTAL_NEIGHBOURS)));
+    VectorGrid contributionVectorsRed(windowResolution.y,   std::vector<Eigen::VectorXf>(windowResolution.x, Eigen::VectorXf::Zero(TOTAL_NEIGHBOURS)));
+    VectorGrid contributionVectorsGreen(windowResolution.y, std::vector<Eigen::VectorXf>(windowResolution.x, Eigen::VectorXf::Zero(TOTAL_NEIGHBOURS)));
+    VectorGrid contributionVectorsBlue(windowResolution.y,  std::vector<Eigen::VectorXf>(windowResolution.x, Eigen::VectorXf::Zero(TOTAL_NEIGHBOURS)));
 
     std::cout   << "Rendering with R-OMIS..."   << std::endl
                 << "Sample generation..."       << std::endl;
@@ -309,9 +309,9 @@ void renderROMIS(const Scene& scene, const Trackball& camera, const BvhInterface
                         techniqueMatrices[y][x] += colVecW * colVecW.transpose();
                         for (int32_t rowIdx = 0; rowIdx < neighborhood.size(); rowIdx++) {
                             float scaleColVecConst                  = scaleFactor * colVecW(rowIdx);
-                            contributionVectorsRed[y][x](rowIdx)    = sampleColor.r * scaleColVecConst;
-                            contributionVectorsGreen[y][x](rowIdx)  = sampleColor.g * scaleColVecConst;
-                            contributionVectorsBlue[y][x](rowIdx)   = sampleColor.b * scaleColVecConst;
+                            contributionVectorsRed[y][x](rowIdx)    += sampleColor.r * scaleColVecConst;
+                            contributionVectorsGreen[y][x](rowIdx)  += sampleColor.g * scaleColVecConst;
+                            contributionVectorsBlue[y][x](rowIdx)   += sampleColor.b * scaleColVecConst;
                         }
                     }
                 }
@@ -337,9 +337,9 @@ void renderROMIS(const Scene& scene, const Trackball& camera, const BvhInterface
             const Eigen::VectorXf& contribVecBlue   = contributionVectorsBlue[y][x];
 
             // Compute weighted contributions to final integral value for each color component 
-            const Eigen::VectorXf integralComponentsRed     = tecMatrix.colPivHouseholderQr().solve(contribVecRed);
-            const Eigen::VectorXf integralComponentsGreen   = tecMatrix.colPivHouseholderQr().solve(contribVecGreen);
-            const Eigen::VectorXf integralComponentsBlue    = tecMatrix.colPivHouseholderQr().solve(contribVecBlue);
+            const Eigen::VectorXf integralComponentsRed     = tecMatrix.completeOrthogonalDecomposition().solve(contribVecRed);
+            const Eigen::VectorXf integralComponentsGreen   = tecMatrix.completeOrthogonalDecomposition().solve(contribVecGreen);
+            const Eigen::VectorXf integralComponentsBlue    = tecMatrix.completeOrthogonalDecomposition().solve(contribVecBlue);
 
             // Compute final color as sum of components
             glm::vec3 finalColor(0.0f);
@@ -348,6 +348,12 @@ void renderROMIS(const Scene& scene, const Trackball& camera, const BvhInterface
                 finalColor.g += integralComponentsGreen(row);
                 finalColor.b += integralComponentsBlue(row);
             }
+
+            // Ensure the final color has no negative values
+            finalColor = glm::max(finalColor, glm::vec3(0.0f));
+
+            // Apply tone mapping and set final pixel color
+            if (features.enableToneMapping) { finalColor = exposureToneMapping(finalColor, features); }
             screen.setPixel(x, y, finalColor);
         }
         #pragma omp critical
