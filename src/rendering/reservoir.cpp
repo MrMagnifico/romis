@@ -25,6 +25,7 @@ size_t Reservoir::update(LightSample sample, float weight) {
     if (uniformRandom < (weight / wSums[smallestWeightIdx] )) { 
         outputSamples[smallestWeightIdx].lightSample.position   = sample.position;
         outputSamples[smallestWeightIdx].lightSample.color      = sample.color;
+        chosenSampleWeights[smallestWeightIdx]                  = weight;
     }
 
     return smallestWeightIdx;

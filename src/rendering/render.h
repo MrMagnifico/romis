@@ -1,6 +1,7 @@
 #pragma once
 #include <framework/disable_all_warnings.h>
 DISABLE_WARNINGS_PUSH()
+#include <Eigen/Dense>
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/vec3.hpp>
 DISABLE_WARNINGS_POP()
@@ -9,12 +10,17 @@ DISABLE_WARNINGS_POP()
 
 #include <rendering/reservoir.h>
 
+#include <vector>
+
 // Forward declarations.
 struct Scene;
 class Screen;
 class Trackball;
 class BvhInterface;
 struct Features;
+
+using MatrixGrid = std::vector<std::vector<Eigen::MatrixXf>>;
+using VectorGrid = std::vector<std::vector<Eigen::VectorXf>>;
 
 // Common
 ReservoirGrid genInitialSamples(const Scene& scene, const Trackball& camera, const BvhInterface& bvh, const Screen& screen, const Features& features);
@@ -30,6 +36,11 @@ float generalisedBalanceHeuristic(const LightSample& sample, const std::vector<R
                                   const Ray& primaryRay, const HitInfo& primaryHitInfo,
                                   const Features& features);
 
+// R-OMIS-specific
+float arbitraryUnbiasedContributionWeightReciprocal(const LightSample& sample, const Reservoir& pixel, const Scene& scene,
+                                                    size_t sampleIdx,
+                                                    const Features& features);
+
 // Render using ReSTIR
 ReservoirGrid renderReSTIR(std::shared_ptr<ReservoirGrid> previousFrameGrid,
                            const Scene& scene, const Trackball& camera,
@@ -38,3 +49,6 @@ ReservoirGrid renderReSTIR(std::shared_ptr<ReservoirGrid> previousFrameGrid,
 
 // Render using R-MIS
 void renderRMIS(const Scene& scene, const Trackball& camera, const BvhInterface& bvh, Screen& screen, const Features& features);
+
+// Render using R-OMIS
+void renderROMIS(const Scene& scene, const Trackball& camera, const BvhInterface& bvh, Screen& screen, const Features& features);

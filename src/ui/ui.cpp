@@ -177,7 +177,7 @@ void UiManager::drawRenderToFile() {
             // Perform a new render and measure the time it took to generate the image.
             using clock         = std::chrono::high_resolution_clock;
             const auto start    = clock::now();
-            renderRMIS(scene, camera, bvh, screen, config.features);
+            renderROMIS(scene, camera, bvh, screen, config.features);
             const auto end      = clock::now();
             std::cout << "Time to render image: " << std::chrono::duration<float, std::milli>(end - start).count() << " milliseconds" << std::endl;
             
@@ -300,14 +300,25 @@ void UiManager::drawRestirFeaturesToggles() {
 
 void UiManager::drawRestirParams() {
     if (ImGui::CollapsingHeader("Parameters", ImGuiTreeNodeFlags_DefaultOpen)) {
+        ImGui::Text("Common");
+        ImGui::SliderInt("Samples per reservoir",   (int*) &config.features.numSamplesInReservoir,      1, 16);
+        ImGui::SliderInt("Canonical sample count",  (int*) &config.features.initialLightSamples,        1, 128);
+
+        ImGui::Spacing();
+        ImGui::Separator();
+
+        ImGui::Text("R-MIS / R-OMIS");
         constexpr auto misWeights = magic_enum::enum_names<MISWeightRMIS>();
         std::vector<const char*> misWeightPointers;
         std::transform(std::begin(misWeights), std::end(misWeights), std::back_inserter(misWeightPointers),
                        [](const auto& str) { return str.data(); });
         ImGui::Combo("MIS weights (R-MIS)", (int*) &config.features.misWeightRMIS, misWeightPointers.data(), static_cast<int>(misWeightPointers.size()));
+        ImGui::SliderInt("Max iterations (R-OMIS)",  (int*) &config.features.maxIterationsROMIS, 1, 10);
 
-        ImGui::SliderInt("Samples per reservoir",       (int*) &config.features.numSamplesInReservoir,      1, 16);
-        ImGui::SliderInt("Canonical sample count",      (int*) &config.features.initialLightSamples,        1, 128);
+        ImGui::Spacing();
+        ImGui::Separator();
+
+        ImGui::Text("ReSTIR");
         ImGui::SliderInt("Neighbours to sample",        (int*) &config.features.numNeighboursToSample,      1, 10);
         ImGui::SliderInt("Spatial resampling passes",   (int*) &config.features.spatialResamplingPasses,    1, 5);
         ImGui::SliderInt("Spatial resample radius",     (int*) &config.features.spatialResampleRadius,      1, 30);

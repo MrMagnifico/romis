@@ -11,18 +11,20 @@
 #include <rendering/screen.h>
 #include <scene/light.h>
 #include <utils/magic_enum.hpp>
+#include <utils/progressbar.hpp>
 #include <utils/utils.h>
 
 #include <array>
 #include <iostream>
 #include <random>
-#include <vector>
 
 
 ReservoirGrid genInitialSamples(const Scene& scene, const Trackball& camera, const BvhInterface& bvh, Screen& screen, const Features& features) {
     glm::ivec2 windowResolution = screen.resolution();
     ReservoirGrid initialSamples(windowResolution.y, std::vector<Reservoir>(windowResolution.x, Reservoir(features.numSamplesInReservoir)));
 
+    progressbar progressbar(windowResolution.y);
+    std::cout << "Initial sample generation..." << std::endl;
     #ifdef NDEBUG
     #pragma omp parallel for schedule(guided)
     #endif
@@ -33,6 +35,8 @@ ReservoirGrid genInitialSamples(const Scene& scene, const Trackball& camera, con
             const Ray cameraRay     = camera.generateRay(normalizedPixelPos);
             initialSamples[y][x]    = genCanonicalSamples(scene, bvh, features, cameraRay);
         }
+        #pragma omp critical
+        progressbar.update();
     }
     return initialSamples;
 }
@@ -140,6 +144,21 @@ float generalisedBalanceHeuristic(const LightSample& sample, const std::vector<R
     return numerator / denominator;
 }
 
+float arbitraryUnbiasedContributionWeightReciprocal(const LightSample& sample, const Reservoir& pixel, const Scene& scene,
+                                                    size_t sampleIdx,
+                                                    const Features& features) {
+    float targetPdfValue = targetPDF(sample, pixel.cameraRay, pixel.hitInfo, features);
+    if (targetPdfValue == 0.0f) { return 0.0f; } // If target function value is zero, theoretical normalised PDF would also be zero
+
+    // Compute mock unbiased contribution weight
+    float mockSampleWeight  = (1.0f / static_cast<float>(features.initialLightSamples)) * // Samples initially generated
+                              targetPdfValue *
+                              (1.0f / scene.lights.size()); // Samples all generated via uniform light sampling, so equal original PDF
+    float arbitraryWeight   = (1.0f / targetPdfValue) *
+                              (pixel.wSums[sampleIdx] - pixel.chosenSampleWeights[sampleIdx] + mockSampleWeight); // Emulate replacing weight of chosen sample with the given sample
+    return (1.0f / arbitraryWeight);
+}
+
 ReservoirGrid renderReSTIR(std::shared_ptr<ReservoirGrid> previousFrameGrid,
                            const Scene& scene, const Trackball& camera,
                            const BvhInterface& bvh, Screen& screen,
@@ -173,6 +192,8 @@ void renderRMIS(const Scene& scene, const Trackball& camera, const BvhInterface&
     ReservoirGrid reservoirGrid = genInitialSamples(scene, camera, bvh, screen, features);
     glm::ivec2 windowResolution = screen.resolution();
 
+    progressbar progressbar(windowResolution.y);
+    std::cout << "Rendering with R-MIS..." << std::endl;
     #ifdef NDEBUG
     #pragma omp parallel for schedule(guided)
     #endif
@@ -187,9 +208,9 @@ void renderRMIS(const Scene& scene, const Trackball& camera, const BvhInterface&
             neighborhood.reserve(9);
             for (int sampleY = y - 1; sampleY <= y + 1; sampleY++) {
                 for (int sampleX = x - 1; sampleX <= x + 1; sampleX++) {
-                    if (sampleY < 0 || windowResolution.y <= sampleY ||
-                        sampleX < 0 || windowResolution.x <= sampleX) { continue; }
-                    neighborhood.push_back(reservoirGrid[sampleY][sampleX]);
+                    int neighborY = std::clamp(sampleY, 0, windowResolution.y - 1);
+                    int neighborX = std::clamp(sampleX, 0, windowResolution.x - 1);
+                    neighborhood.push_back(reservoirGrid[neighborY][neighborX]);
                 }
             }
 
@@ -216,6 +237,121 @@ void renderRMIS(const Scene& scene, const Trackball& camera, const BvhInterface&
             // Apply tone mapping and set final pixel color
             if (features.enableToneMapping) { finalColor = exposureToneMapping(finalColor, features); }
             screen.setPixel(x, y, finalColor);
+
+        }
+        #pragma omp critical
+        progressbar.update();
+    }
+    std::cout << std::endl;
+}
+
+void renderROMIS(const Scene& scene, const Trackball& camera, const BvhInterface& bvh, Screen& screen, const Features& features) {
+    constexpr int32_t TOTAL_NEIGHBOURS = 9; // TODO: Make this adjustable
+    glm::ivec2 windowResolution = screen.resolution();
+    MatrixGrid techniqueMatrices(windowResolution.y,        std::vector<Eigen::MatrixXf>(windowResolution.x, Eigen::MatrixXf(TOTAL_NEIGHBOURS, TOTAL_NEIGHBOURS)));
+    VectorGrid contributionVectorsRed(windowResolution.y,   std::vector<Eigen::VectorXf>(windowResolution.x, Eigen::VectorXf(TOTAL_NEIGHBOURS)));
+    VectorGrid contributionVectorsGreen(windowResolution.y, std::vector<Eigen::VectorXf>(windowResolution.x, Eigen::VectorXf(TOTAL_NEIGHBOURS)));
+    VectorGrid contributionVectorsBlue(windowResolution.y,  std::vector<Eigen::VectorXf>(windowResolution.x, Eigen::VectorXf(TOTAL_NEIGHBOURS)));
+
+    std::cout   << "Rendering with R-OMIS..."   << std::endl
+                << "Sample generation..."       << std::endl;
+    for (uint32_t iteration = 0U; iteration < features.maxIterationsROMIS; iteration++) {
+        ReservoirGrid reservoirGrid = genInitialSamples(scene, camera, bvh, screen, features);
+
+        std::cout << std::endl
+                  << "Iteration " << iteration + 1 << std::endl;
+        progressbar progressbarPixels(static_cast<int32_t>(windowResolution.y));
+        #ifdef NDEBUG
+        #pragma omp parallel for schedule(guided)
+        #endif
+        for (int y = 0; y < windowResolution.y; y++) {
+            for (int x = 0; x != windowResolution.x; x++) {
+                // Collect primary ray info
+                const Ray& primaryRay           = reservoirGrid[y][x].cameraRay;
+                const HitInfo& primaryHitInfo   = reservoirGrid[y][x].hitInfo;
+
+                // Gather samples from all pixels in 3x3 neighborhood
+                std::vector<Reservoir> neighborhood;
+                neighborhood.reserve(9);
+                for (int sampleY = y - 1; sampleY <= y + 1; sampleY++) {
+                    for (int sampleX = x - 1; sampleX <= x + 1; sampleX++) {
+                        int neighborY = std::clamp(sampleY, 0, windowResolution.y - 1);
+                        int neighborX = std::clamp(sampleX, 0, windowResolution.x - 1);
+                        neighborhood.push_back(reservoirGrid[neighborY][neighborX]);
+                    }
+                }
+
+                // Construct elements of the technique matrix and contribution vector estimates
+                for (size_t pixelIdx = 0ULL; pixelIdx < neighborhood.size(); pixelIdx++) {
+                    const Reservoir& pixel = neighborhood[pixelIdx];
+                    for (size_t sampleIdx = 0ULL; sampleIdx < pixel.outputSamples.size(); sampleIdx++) {
+                        const SampleData& sample = pixel.outputSamples[sampleIdx];
+
+                        // Compute column vector of all sampling techniques evaluated with current sample
+                        Eigen::VectorXf colVecW(neighborhood.size());
+                        for (size_t techniqueIdx = 0ULL; techniqueIdx < neighborhood.size(); techniqueIdx++) {
+                            const Reservoir& distribution   = neighborhood[techniqueIdx];
+                            colVecW(techniqueIdx)           = arbitraryUnbiasedContributionWeightReciprocal(sample.lightSample, distribution, scene, sampleIdx, features);
+                        }
+
+                        // Compute scaling factor
+                        float scaleFactor = std::numeric_limits<float>::min();
+                        for (float techniqueEval : colVecW) { scaleFactor += features.numSamplesInReservoir * techniqueEval; } // Each reservoir/technique stores the same number of samples
+                        scaleFactor = 1.0f / scaleFactor;
+
+                        // Evaluate shading (integrand function) for the current sample
+                        glm::vec3 sampleColor = testVisibilityLightSample(sample.lightSample.position, bvh, features, primaryRay, primaryHitInfo)           ?
+                                                computeShading(sample.lightSample.position, sample.lightSample.color, features, primaryRay, primaryHitInfo) :
+                                                glm::vec3(0.0f);
+
+                        // Scale column vector and add to estimates
+                        colVecW                 *= scaleFactor;
+                        techniqueMatrices[y][x] += colVecW * colVecW.transpose();
+                        for (int32_t rowIdx = 0; rowIdx < neighborhood.size(); rowIdx++) {
+                            float scaleColVecConst                  = scaleFactor * colVecW(rowIdx);
+                            contributionVectorsRed[y][x](rowIdx)    = sampleColor.r * scaleColVecConst;
+                            contributionVectorsGreen[y][x](rowIdx)  = sampleColor.g * scaleColVecConst;
+                            contributionVectorsBlue[y][x](rowIdx)   = sampleColor.b * scaleColVecConst;
+                        }
+                    }
+                }
+            }
+            #pragma omp critical
+            progressbarPixels.update();
         }
     }
+    std::cout << std::endl;
+
+    // Solve linear system on per-pixel basis
+    std::cout << "Integral component summation..." << std::endl;
+    progressbar progressbarPixels(static_cast<int32_t>(windowResolution.y));
+    #ifdef NDEBUG
+    #pragma omp parallel for schedule(guided)
+    #endif
+    for (int y = 0; y < windowResolution.y; y++) {
+        for (int x = 0; x != windowResolution.x; x++) {
+            // Gather technique matrix and contribution vector for each color component 
+            const Eigen::MatrixXf& tecMatrix        = techniqueMatrices[y][x];
+            const Eigen::VectorXf& contribVecRed    = contributionVectorsRed[y][x];
+            const Eigen::VectorXf& contribVecGreen  = contributionVectorsGreen[y][x];
+            const Eigen::VectorXf& contribVecBlue   = contributionVectorsBlue[y][x];
+
+            // Compute weighted contributions to final integral value for each color component 
+            const Eigen::VectorXf integralComponentsRed     = tecMatrix.colPivHouseholderQr().solve(contribVecRed);
+            const Eigen::VectorXf integralComponentsGreen   = tecMatrix.colPivHouseholderQr().solve(contribVecGreen);
+            const Eigen::VectorXf integralComponentsBlue    = tecMatrix.colPivHouseholderQr().solve(contribVecBlue);
+
+            // Compute final color as sum of components
+            glm::vec3 finalColor(0.0f);
+            for (int32_t row = 0; row < TOTAL_NEIGHBOURS; row++) {
+                finalColor.r += integralComponentsRed(row);
+                finalColor.g += integralComponentsGreen(row);
+                finalColor.b += integralComponentsBlue(row);
+            }
+            screen.setPixel(x, y, finalColor);
+        }
+        #pragma omp critical
+        progressbarPixels.update();
+    }
+    std::cout << std::endl;
 }

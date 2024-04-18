@@ -28,7 +28,8 @@ struct SampleData {
 struct Reservoir {
     Reservoir(size_t numSamples) : outputSamples(numSamples)
                                  , sampleNums(numSamples, 1ULL)
-                                 , wSums(numSamples, std::numeric_limits<float>::min()) {}
+                                 , wSums(numSamples, std::numeric_limits<float>::min())
+                                 , chosenSampleWeights(numSamples, 0.0f) {}
 
     // Intersection position info
     Ray cameraRay;
@@ -38,6 +39,7 @@ struct Reservoir {
     std::vector<SampleData> outputSamples;   
     std::vector<size_t> sampleNums;
     std::vector<float> wSums;
+    std::vector<float> chosenSampleWeights;
 
     /**
      * Process the given sample for potential storage by a sub-reservoir
