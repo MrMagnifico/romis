@@ -54,7 +54,8 @@ ReservoirGrid renderReSTIR(std::shared_ptr<ReservoirGrid> previousFrameGrid,
 }
 
 void renderRMIS(const Scene& scene, const Trackball& camera, const BvhInterface& bvh, Screen& screen, const Features& features) {
-    glm::ivec2 windowResolution = screen.resolution();
+    glm::ivec2 windowResolution         = screen.resolution();
+    ResampleIndicesGrid resampleIndices = generateResampleIndicesGrid(windowResolution, features);
     PixelGrid finalPixelColors(windowResolution.y,   std::vector<glm::vec3>(windowResolution.x, glm::vec3(0.0f)));
     std::cout << "===== Rendering with R-MIS =====" << std::endl;
 
@@ -72,16 +73,10 @@ void renderRMIS(const Scene& scene, const Trackball& camera, const BvhInterface&
                 const Ray& primaryRay           = reservoirGrid[y][x].cameraRay;
                 const HitInfo& primaryHitInfo   = reservoirGrid[y][x].hitInfo;
 
-                // Gather samples from all pixels in 3x3 neighborhood
+                // Gather samples from neighborhood defined by resample radius
                 std::vector<Reservoir> neighborhood;
-                neighborhood.reserve(9);
-                for (int sampleY = y - 1; sampleY <= y + 1; sampleY++) {
-                    for (int sampleX = x - 1; sampleX <= x + 1; sampleX++) {
-                        int neighborY = std::clamp(sampleY, 0, windowResolution.y - 1);
-                        int neighborX = std::clamp(sampleX, 0, windowResolution.x - 1);
-                        neighborhood.push_back(reservoirGrid[neighborY][neighborX]);
-                    }
-                }
+                neighborhood.reserve(features.numNeighboursToSample + 1); // Include space for the current pixel AND neighbours
+                for (const glm::ivec2& index : resampleIndices[y][x]) { neighborhood.push_back(reservoirGrid[index.y][index.x]); }
 
                 // Combine shading results from all gathered pixels
                 glm::vec3 finalColor(0.0f);
@@ -116,20 +111,20 @@ void renderRMIS(const Scene& scene, const Trackball& camera, const BvhInterface&
 
 void renderROMIS(const Scene& scene, const Trackball& camera, const BvhInterface& bvh, Screen& screen, const Features& features) {
     // Used in both direct and progressive estimators
-    constexpr int32_t TOTAL_NEIGHBOURS = 9; // TODO: Make this adjustable
-    glm::ivec2 windowResolution = screen.resolution();
-    MatrixGrid techniqueMatrices(windowResolution.y,        std::vector<Eigen::MatrixXf>(windowResolution.x, Eigen::MatrixXf::Zero(TOTAL_NEIGHBOURS, TOTAL_NEIGHBOURS)));
-    VectorGrid contributionVectorsRed(windowResolution.y,   std::vector<Eigen::VectorXf>(windowResolution.x, Eigen::VectorXf::Zero(TOTAL_NEIGHBOURS)));
-    VectorGrid contributionVectorsGreen(windowResolution.y, std::vector<Eigen::VectorXf>(windowResolution.x, Eigen::VectorXf::Zero(TOTAL_NEIGHBOURS)));
-    VectorGrid contributionVectorsBlue(windowResolution.y,  std::vector<Eigen::VectorXf>(windowResolution.x, Eigen::VectorXf::Zero(TOTAL_NEIGHBOURS)));
+    glm::ivec2 windowResolution         = screen.resolution();
+    ResampleIndicesGrid resampleIndices = generateResampleIndicesGrid(windowResolution, features);
+    MatrixGrid techniqueMatrices(windowResolution.y,        std::vector<Eigen::MatrixXf>(windowResolution.x, Eigen::MatrixXf::Zero(features.numNeighboursToSample, features.numNeighboursToSample)));
+    VectorGrid contributionVectorsRed(windowResolution.y,   std::vector<Eigen::VectorXf>(windowResolution.x, Eigen::VectorXf::Zero(features.numNeighboursToSample)));
+    VectorGrid contributionVectorsGreen(windowResolution.y, std::vector<Eigen::VectorXf>(windowResolution.x, Eigen::VectorXf::Zero(features.numNeighboursToSample)));
+    VectorGrid contributionVectorsBlue(windowResolution.y,  std::vector<Eigen::VectorXf>(windowResolution.x, Eigen::VectorXf::Zero(features.numNeighboursToSample)));
 
     // ===== PROGRESSIVE ONLY =====
     PixelGrid finalPixelColors(windowResolution.y,   std::vector<glm::vec3>(windowResolution.x, glm::vec3(0.0f)));
-    VectorGrid alphaVectorsRed(windowResolution.y,   std::vector<Eigen::VectorXf>(windowResolution.x, Eigen::VectorXf::Zero(TOTAL_NEIGHBOURS)));
-    VectorGrid alphaVectorsGreen(windowResolution.y, std::vector<Eigen::VectorXf>(windowResolution.x, Eigen::VectorXf::Zero(TOTAL_NEIGHBOURS)));
-    VectorGrid alphaVectorsBlue(windowResolution.y,  std::vector<Eigen::VectorXf>(windowResolution.x, Eigen::VectorXf::Zero(TOTAL_NEIGHBOURS)));
-    const int32_t totalSamples              = TOTAL_NEIGHBOURS * features.numSamplesInReservoir; // All pixels generate the same number of samples and sample the same number of neighbours
-    const int32_t fractionOfTotalSamples    = features.numSamplesInReservoir / TOTAL_NEIGHBOURS; // Redundant? Yes. Helps with code clarity? Also yes
+    VectorGrid alphaVectorsRed(windowResolution.y,   std::vector<Eigen::VectorXf>(windowResolution.x, Eigen::VectorXf::Zero(features.numNeighboursToSample)));
+    VectorGrid alphaVectorsGreen(windowResolution.y, std::vector<Eigen::VectorXf>(windowResolution.x, Eigen::VectorXf::Zero(features.numNeighboursToSample)));
+    VectorGrid alphaVectorsBlue(windowResolution.y,  std::vector<Eigen::VectorXf>(windowResolution.x, Eigen::VectorXf::Zero(features.numNeighboursToSample)));
+    const int32_t totalSamples              = features.numNeighboursToSample * features.numSamplesInReservoir; // All pixels generate the same number of samples and sample the same number of neighbours
+    const int32_t fractionOfTotalSamples    = features.numSamplesInReservoir / features.numNeighboursToSample; // Redundant? Yes. Helps with code clarity? Also yes
 
     std::cout << "===== Rendering with R-OMIS ====="   << std::endl;
     for (uint32_t iteration = 0U; iteration < features.maxIterationsMIS; iteration++) {
@@ -146,16 +141,10 @@ void renderROMIS(const Scene& scene, const Trackball& camera, const BvhInterface
                 const Ray& primaryRay           = reservoirGrid[y][x].cameraRay;
                 const HitInfo& primaryHitInfo   = reservoirGrid[y][x].hitInfo;
 
-                // Gather samples from all pixels in 3x3 neighborhood
+                // Gather samples from neighborhood defined by resample radius
                 std::vector<Reservoir> neighborhood;
-                neighborhood.reserve(9);
-                for (int sampleY = y - 1; sampleY <= y + 1; sampleY++) {
-                    for (int sampleX = x - 1; sampleX <= x + 1; sampleX++) {
-                        int neighborY = std::clamp(sampleY, 0, windowResolution.y - 1);
-                        int neighborX = std::clamp(sampleX, 0, windowResolution.x - 1);
-                        neighborhood.push_back(reservoirGrid[neighborY][neighborX]);
-                    }
-                }
+                neighborhood.reserve(features.numNeighboursToSample + 1); // Include space for the current pixel AND neighbours
+                for (const glm::ivec2& index : resampleIndices[y][x]) { neighborhood.push_back(reservoirGrid[index.y][index.x]); }
 
                 // ===== PROGRESSIVE ONLY =====
                 // Update alpha vector estimates
@@ -166,7 +155,7 @@ void renderROMIS(const Scene& scene, const Trackball& camera, const BvhInterface
                 }
                 
                 // Construct elements of the technique matrix and contribution vector estimates
-                for (size_t pixelIdx = 0ULL; pixelIdx < neighborhood.size(); pixelIdx++) {
+                for (size_t pixelIdx = 0ULL; pixelIdx < features.numNeighboursToSample; pixelIdx++) {
                     // ===== PROGRESSIVE ONLY ===
                     // Add this pixel's portion of the sum of alpha to current iteration estimate
                     finalPixelColors[y][x] += glm::vec3(alphaVectorsRed[y][x](pixelIdx),
@@ -178,8 +167,8 @@ void renderROMIS(const Scene& scene, const Trackball& camera, const BvhInterface
                         const SampleData& sample = pixel.outputSamples[sampleIdx];
 
                         // Compute column vector of all sampling techniques evaluated with current sample
-                        Eigen::VectorXf colVecW(neighborhood.size());
-                        for (int32_t distributionIdx = 0ULL; distributionIdx < neighborhood.size(); distributionIdx++) {
+                        Eigen::VectorXf colVecW(features.numNeighboursToSample);
+                        for (int32_t distributionIdx = 0ULL; distributionIdx < features.numNeighboursToSample; distributionIdx++) {
                             const Reservoir& distribution   = neighborhood[distributionIdx];
                             colVecW(distributionIdx)        = arbitraryUnbiasedContributionWeightReciprocal(sample.lightSample, distribution, scene, sampleIdx, features);
                         }
@@ -193,7 +182,7 @@ void renderROMIS(const Scene& scene, const Trackball& camera, const BvhInterface
                         // Add this sample's evaluation to current iteration estimate 
                         glm::vec3 sumAlphaProducts(0.0f);
                         float sumSampleFractionProducts = std::numeric_limits<float>::min();
-                        for (int32_t distributionIdx = 0ULL; distributionIdx < neighborhood.size(); distributionIdx++) {
+                        for (int32_t distributionIdx = 0ULL; distributionIdx < features.numNeighboursToSample; distributionIdx++) {
                             glm::vec3 alphaRGB(alphaVectorsRed[y][x](distributionIdx),
                                                alphaVectorsGreen[y][x](distributionIdx),
                                                alphaVectorsBlue[y][x](distributionIdx));
@@ -211,7 +200,7 @@ void renderROMIS(const Scene& scene, const Trackball& camera, const BvhInterface
                         // Scale column vector and add to estimates
                         colVecW                 *= scaleFactor;
                         techniqueMatrices[y][x] += colVecW * colVecW.transpose();
-                        for (int32_t rowIdx = 0; rowIdx < neighborhood.size(); rowIdx++) {
+                        for (int32_t rowIdx = 0; rowIdx < features.numNeighboursToSample; rowIdx++) {
                             float scaleColVecConst                  = scaleFactor * colVecW(rowIdx);
                             contributionVectorsRed[y][x](rowIdx)    += sampleColor.r * scaleColVecConst;
                             contributionVectorsGreen[y][x](rowIdx)  += sampleColor.g * scaleColVecConst;
@@ -244,7 +233,7 @@ void renderROMIS(const Scene& scene, const Trackball& camera, const BvhInterface
 
                 // Compute final color as sum of components
                 glm::vec3 finalColor(0.0f);
-                for (int32_t row = 0; row < TOTAL_NEIGHBOURS; row++) {
+                for (int32_t row = 0; row < features.numNeighboursToSample; row++) {
                     finalColor.r += integralComponentsRed(row);
                     finalColor.g += integralComponentsGreen(row);
                     finalColor.b += integralComponentsBlue(row);

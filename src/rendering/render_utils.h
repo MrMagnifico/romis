@@ -11,12 +11,16 @@ DISABLE_WARNINGS_POP()
 #include <rendering/screen.h>
 
 
-using PixelGrid = std::vector<std::vector<glm::vec3>>;
+using PixelGrid             = std::vector<std::vector<glm::vec3>>;
+using ResampleIndicesGrid   = std::vector<std::vector<std::vector<glm::ivec2>>>;
 
 // Common
 ReservoirGrid genInitialSamples(const Scene& scene, const Trackball& camera, const BvhInterface& bvh, const Screen& screen, const Features& features);
 glm::vec3 finalShading(const Reservoir& reservoir, const Ray& primaryRay, const BvhInterface& bvh, const Features& features);
 void combineToScreen(Screen& screen, const PixelGrid& finalPixelColors, const Features& features);
+std::vector<glm::ivec2> candidateIndices(int32_t x, int32_t y,
+                                         const glm::ivec2& windowResolution, const Features& features);
+ResampleIndicesGrid generateResampleIndicesGrid(const glm::ivec2& windowResolution, const Features& features);
 
 // ReSTIR-specific
 void spatialReuse(ReservoirGrid& reservoirGrid, const BvhInterface& bvh, const Screen& screen, const Features& features);

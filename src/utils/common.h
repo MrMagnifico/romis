@@ -98,6 +98,8 @@ struct Features {
     bool initialSamplesVisibilityCheck  = false;
     uint32_t numSamplesInReservoir      = 2U;
     uint32_t initialLightSamples        = 32U;
+    uint32_t numNeighboursToSample      = 5U;
+    uint32_t spatialResampleRadius      = 10U;
 
     // R-MIS/R-OMIS parameter(s)
     uint32_t maxIterationsMIS       = 5U;
@@ -112,9 +114,7 @@ struct Features {
     bool temporalReuse                  = true;
 
     // ReSTIR parameters
-    uint32_t numNeighboursToSample      = 5U;
     uint32_t spatialResamplingPasses    = 2U;
-    uint32_t spatialResampleRadius      = 10U;
     uint32_t temporalClampM             = 20U;
 
     // Misc parameters
