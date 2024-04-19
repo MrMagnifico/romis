@@ -282,6 +282,12 @@ void UiManager::drawRayTracingFeaturesToggles() {
         ImGui::Spacing();
         ImGui::Separator();
 
+        ImGui::Text("R-MIS / R-OMIS");
+        ImGui::Checkbox("Save alphas visualisation", &config.features.saveAlphasVisualisation);
+
+        ImGui::Spacing();
+        ImGui::Separator();
+
         ImGui::Text("ReSTIR");
         ImGui::Checkbox("Use unbiased combination",             &config.features.unbiasedCombination);
         ImGui::Checkbox("Spatial reuse",                        &config.features.spatialReuse);

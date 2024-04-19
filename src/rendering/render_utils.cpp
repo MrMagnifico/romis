@@ -82,7 +82,7 @@ std::vector<glm::ivec2> candidateIndices(int32_t x, int32_t y,
     std::vector<glm::ivec2> indices;
     indices.reserve(features.numNeighboursToSample + 1);    // Assign enough space for current pixel AND neighbours
     indices.push_back(glm::ivec2(x, y));                    // Always include the pixel itself
-    for (size_t candidateIdx = 1ULL; candidateIdx < features.numNeighboursToSample; candidateIdx++) {
+    for (uint32_t candidateIdx = 0U; candidateIdx < features.numNeighboursToSample; candidateIdx++) {
         indices.push_back(glm::ivec2(distrX(gen), distrY(gen)));
     }
     return indices;
@@ -201,6 +201,62 @@ float generalisedBalanceHeuristic(const LightSample& sample, const std::vector<R
     float denominator   = std::numeric_limits<float>::min();
     for (const Reservoir& pixel : allPixels) { denominator += targetPDF(sample, pixel.cameraRay, pixel.hitInfo, features); }
     return numerator / denominator;
+}
+
+void visualiseAlphas(const MatrixGrid& techniqueMatrices,
+                     const VectorGrid& contributionVectorsRed,
+                     const VectorGrid& contributionVectorsGreen,
+                     const VectorGrid& contributionVectorsBlue,
+                     const glm::ivec2& windowResolution, const Features& features) {
+    constexpr glm::vec3 purePositiveColor   = { 1.0f, 0.5f, 0.0f };
+    constexpr glm::vec3 pureNegativeColor   = { 0.0f, 0.5f, 1.0f };
+    constexpr glm::vec3 zeroColor           = { 0.0f, 0.0f, 0.0f };
+
+    // Generate images
+    const uint32_t totalDistributions = features.numNeighboursToSample + 1U;
+    std::vector<Screen> images(totalDistributions * 3, Screen(windowResolution, false));
+    std::cout << "Saving alpha visualisations..." << std::endl;
+    progressbar progressbarPixels(static_cast<int32_t>(windowResolution.y));
+    #ifdef NDEBUG
+    #pragma omp parallel for schedule(guided)
+    #endif
+    for (int y = 0; y < windowResolution.y; y++) {
+        for (int x = 0; x != windowResolution.x; x++) {
+            // Compute weighted contributions to final integral value for each color component 
+            std::array<Eigen::VectorXf, 3> integralComponents = { solveSystem(techniqueMatrices[y][x], contributionVectorsRed[y][x]),
+                                                                  solveSystem(techniqueMatrices[y][x], contributionVectorsGreen[y][x]),
+                                                                  solveSystem(techniqueMatrices[y][x], contributionVectorsBlue[y][x]) };
+
+            // Set color for each technique for each color channel
+            for (uint32_t neighbourIdx = 0U; neighbourIdx < totalDistributions; neighbourIdx++) {
+                for (uint32_t colour = 0U; colour < 3U; colour++) {
+                    float alphaVal      = integralComponents[colour](neighbourIdx);
+                    glm::vec3 visColor  = alphaVal > 0.0f                                   ?
+                                          glm::mix(zeroColor, purePositiveColor, alphaVal)  :
+                                          glm::mix(zeroColor, pureNegativeColor, -alphaVal);
+                    images[(neighbourIdx * 3U) + colour].setPixel(x, y, visColor);
+                }
+            }
+        }
+        #pragma omp critical
+        progressbarPixels.update();
+    }
+    std::cout << std::endl;
+
+    // Save images to timestamped folder
+    std::string time                    = currentTime();
+    std::filesystem::path renderDirPath = RENDERS_DIR;
+    std::filesystem::path visDirPath    = renderDirPath / time;
+    if (!std::filesystem::exists(renderDirPath))    { std::filesystem::create_directory(renderDirPath); }
+    if (!std::filesystem::exists(visDirPath))       { std::filesystem::create_directory(visDirPath); }
+    for (uint32_t neighbourIdx = 0U; neighbourIdx < totalDistributions; neighbourIdx++) {
+        for (uint32_t colour = 0U; colour < 3U; colour++) {
+            Screen& visScreen                   = images[(neighbourIdx * 3U) + colour];
+            auto colorName                      = magic_enum::enum_name(magic_enum::enum_value<Color>(colour));
+            std::filesystem::path visFilePath   = visDirPath / std::format("Distribution {} - {}.bmp", neighbourIdx, colorName);
+            visScreen.writeBitmapToFile(visFilePath);
+        }
+    }
 }
 
 float arbitraryUnbiasedContributionWeightReciprocal(const LightSample& sample, const Reservoir& pixel, const Scene& scene,

@@ -11,6 +11,14 @@ DISABLE_WARNINGS_POP()
 #include <rendering/screen.h>
 
 
+enum class Color {
+    Red = 0,
+    Green,
+    Blue
+};
+
+using MatrixGrid            = std::vector<std::vector<Eigen::MatrixXf>>;
+using VectorGrid            = std::vector<std::vector<Eigen::VectorXf>>;
 using PixelGrid             = std::vector<std::vector<glm::vec3>>;
 using ResampleIndicesGrid   = std::vector<std::vector<std::vector<glm::ivec2>>>;
 
@@ -33,7 +41,12 @@ float generalisedBalanceHeuristic(const LightSample& sample, const std::vector<R
                                   const Features& features);
 
 // R-OMIS-specific
+void visualiseAlphas(const MatrixGrid& techniqueMatrices,
+                     const VectorGrid& contributionVectorsRed,
+                     const VectorGrid& contributionVectorsGreen,
+                     const VectorGrid& contributionVectorsBlue,
+                     const glm::ivec2& windowResolution, const Features& features);
 float arbitraryUnbiasedContributionWeightReciprocal(const LightSample& sample, const Reservoir& pixel, const Scene& scene,
                                                     size_t sampleIdx,
                                                     const Features& features);
-inline Eigen::VectorXf solveSystem(const Eigen::MatrixXf& A, const Eigen::VectorXf& b) { return A.completeOrthogonalDecomposition().solve(b); } 
+inline Eigen::VectorXf solveSystem(const Eigen::MatrixXf& A, const Eigen::VectorXf& b) { return A.completeOrthogonalDecomposition().solve(b); }

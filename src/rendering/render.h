@@ -20,8 +20,6 @@ class Trackball;
 class BvhInterface;
 struct Features;
 
-using MatrixGrid    = std::vector<std::vector<Eigen::MatrixXf>>;
-using VectorGrid    = std::vector<std::vector<Eigen::VectorXf>>;
 
 // All rendering modes on offer
 ReservoirGrid renderReSTIR(std::shared_ptr<ReservoirGrid> previousFrameGrid,

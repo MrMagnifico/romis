@@ -98,6 +98,7 @@ struct Features {
     MISWeightRMIS misWeightRMIS     = MISWeightRMIS::Equal;
     bool useProgressiveROMIS        = false;
     uint32_t progressiveUpdateMod   = 1U;
+    bool saveAlphasVisualisation    = true;
 
     // ReSTIR feature flags
     bool unbiasedCombination            = false;
@@ -119,7 +120,7 @@ struct Features {
         archive(CEREAL_NVP(enableShading), CEREAL_NVP(enableRecursive), CEREAL_NVP(enableHardShadow), CEREAL_NVP(enableSoftShadow), CEREAL_NVP(enableNormalInterp), CEREAL_NVP(enableTextureMapping), CEREAL_NVP(enableAccelStructure),
                 CEREAL_NVP(maxReflectionRecursion),
                 CEREAL_NVP(rayTraceMode), CEREAL_NVP(initialSamplesVisibilityCheck), CEREAL_NVP(numSamplesInReservoir), CEREAL_NVP(initialLightSamples), CEREAL_NVP(numNeighboursToSample), CEREAL_NVP(spatialResampleRadius),
-                CEREAL_NVP(maxIterationsMIS), CEREAL_NVP(misWeightRMIS), CEREAL_NVP(useProgressiveROMIS), CEREAL_NVP(progressiveUpdateMod),
+                CEREAL_NVP(maxIterationsMIS), CEREAL_NVP(misWeightRMIS), CEREAL_NVP(useProgressiveROMIS), CEREAL_NVP(progressiveUpdateMod), CEREAL_NVP(saveAlphasVisualisation),
                 CEREAL_NVP(unbiasedCombination), CEREAL_NVP(spatialReuse), CEREAL_NVP(spatialReuseVisibilityCheck), CEREAL_NVP(temporalReuse),
                 CEREAL_NVP(spatialResamplingPasses), CEREAL_NVP(temporalClampM),
                 CEREAL_NVP(enableToneMapping), CEREAL_NVP(gamma), CEREAL_NVP(exposure)); 
