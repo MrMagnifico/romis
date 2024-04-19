@@ -2,6 +2,7 @@
 
 #include <framework/trackball.h>
 
+#include <post_processing/tone_mapping.h>
 #include <scene/light.h>
 #include <utils/progressbar.hpp>
 #include <utils/utils.h>
@@ -29,6 +30,7 @@ ReservoirGrid genInitialSamples(const Scene& scene, const Trackball& camera, con
         #pragma omp critical
         progressbar.update();
     }
+    std::cout << std::endl;
     return initialSamples;
 }
 
@@ -43,6 +45,26 @@ glm::vec3 finalShading(const Reservoir& reservoir, const Ray& primaryRay, const 
     }
     finalColor /= reservoir.outputSamples.size(); // Divide final shading value by number of samples
     return finalColor;
+}
+
+// Average iterations and write tone-mapped value to screen
+void combineToScreen(Screen& screen, const PixelGrid& finalPixelColors, const Features& features) {
+    glm::ivec2 windowResolution = screen.resolution();
+    std::cout << "Iteration combination..." << std::endl;
+    progressbar progressbarPixels(static_cast<int32_t>(windowResolution.y));
+    #ifdef NDEBUG
+    #pragma omp parallel for schedule(guided)
+    #endif
+    for (int y = 0; y < windowResolution.y; y++) {
+        for (int x = 0; x != windowResolution.x; x++) {
+            glm::vec3 finalColor = finalPixelColors[y][x] / static_cast<float>(features.maxIterationsMIS);
+            if (features.enableToneMapping) { finalColor = exposureToneMapping(finalColor, features); }
+            screen.setPixel(x, y, finalColor);
+        }
+        #pragma omp critical
+        progressbarPixels.update();
+    }
+    std::cout << std::endl;
 }
 
 void spatialReuse(ReservoirGrid& reservoirGrid, const BvhInterface& bvh, const Screen& screen, const Features& features) {
@@ -95,6 +117,7 @@ void spatialReuse(ReservoirGrid& reservoirGrid, const BvhInterface& bvh, const S
             #pragma omp critical
             progressBarPixels.update();
         }
+        std::cout << std::endl;
         prevIteration = reservoirGrid;
     }
 }
@@ -133,6 +156,7 @@ void temporalReuse(ReservoirGrid& reservoirGrid, ReservoirGrid& previousFrameGri
         #pragma omp critical
         progressBarPixels.update();
     }
+    std::cout << std::endl;
 }
 
 float generalisedBalanceHeuristic(const LightSample& sample, const std::vector<Reservoir>& allPixels,

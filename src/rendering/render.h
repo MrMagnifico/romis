@@ -21,7 +21,6 @@ class BvhInterface;
 struct Features;
 
 using MatrixGrid    = std::vector<std::vector<Eigen::MatrixXf>>;
-using PixelGrid     = std::vector<std::vector<glm::vec3>>;
 using VectorGrid    = std::vector<std::vector<Eigen::VectorXf>>;
 
 // All rendering modes on offer

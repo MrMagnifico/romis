@@ -96,12 +96,14 @@ struct Features {
     // Shared R-MIS/ReSTIR feature flag(s) and parameter(s)
     RayTraceMode rayTraceMode           = RayTraceMode::ROMIS;
     bool initialSamplesVisibilityCheck  = false;
-    uint32_t numSamplesInReservoir      = 1U;
+    uint32_t numSamplesInReservoir      = 2U;
     uint32_t initialLightSamples        = 32U;
 
     // R-MIS/R-OMIS parameter(s)
-    uint32_t maxIterationsRMIS  = 1U;
-    MISWeightRMIS misWeightRMIS = MISWeightRMIS::Equal;
+    uint32_t maxIterationsMIS       = 5U;
+    MISWeightRMIS misWeightRMIS     = MISWeightRMIS::Equal;
+    bool useProgressiveROMIS        = false;
+    uint32_t progressiveUpdateMod   = 1U;
 
     // ReSTIR feature flags
     bool unbiasedCombination            = false;

@@ -83,6 +83,7 @@
         "future": "cpp",
         "set": "cpp",
         "unordered_set": "cpp",
-        "valarray": "cpp"
+        "valarray": "cpp",
+        "dense": "cpp"
     }
 }
