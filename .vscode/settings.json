@@ -84,6 +84,9 @@
         "set": "cpp",
         "unordered_set": "cpp",
         "valarray": "cpp",
-        "dense": "cpp"
+        "dense": "cpp",
+        "bitset": "cpp",
+        "regex": "cpp",
+        "typeindex": "cpp"
     }
 }

@@ -6,6 +6,8 @@
 
 #include <framework/trackball.h>
 
+#include <cereal/archives/json.hpp>
+
 #include <post_processing/tone_mapping.h>
 #include <rendering/render_utils.h>
 #include <rendering/screen.h>
@@ -15,6 +17,7 @@
 #include <utils/utils.h>
 
 #include <array>
+#include <fstream>
 #include <iostream>
 
 
@@ -255,20 +258,22 @@ std::optional<ReservoirGrid> renderRayTraced(std::shared_ptr<ReservoirGrid> prev
                                              const Scene& scene, const Trackball& camera,
                                              const BvhInterface& bvh, Screen& screen,
                                              const Features& features) {
+    // Render with desired mode
+    std::optional<ReservoirGrid> finalReservoirs = std::nullopt;
     switch (features.rayTraceMode) {
-        case RayTraceMode::ReSTIR: {
-            return renderReSTIR(previousFrameGrid, scene, camera, bvh, screen, features);
-        } break;
-        case RayTraceMode::RMIS: {
-            renderRMIS(scene, camera, bvh, screen, features);
-            return std::nullopt;
-        } break;
-        case RayTraceMode::ROMIS: {
-            renderROMIS(scene, camera, bvh, screen, features);
-            return std::nullopt;
-        }
-        default: {
-            throw std::runtime_error("Unsupported ray-tracing render mode requested from entry point");
-        }
+        case RayTraceMode::ReSTIR:  { finalReservoirs = renderReSTIR(previousFrameGrid, scene, camera, bvh, screen, features); } break;
+        case RayTraceMode::RMIS:    { renderRMIS(scene, camera, bvh, screen, features); } break;
+        case RayTraceMode::ROMIS:   { renderROMIS(scene, camera, bvh, screen, features); } break;
+        default:                    { throw std::runtime_error("Unsupported ray-tracing render mode requested from entry point"); }
     }
+
+    // Save used configuration to timestamped file
+    std::filesystem::path renderDirPath = RENDERS_DIR;
+    if (!std::filesystem::exists(renderDirPath)) { std::filesystem::create_directory(renderDirPath); }
+    std::filesystem::path configFilePath = renderDirPath / (currentTime() + ".json");
+    std::ofstream fileStream(configFilePath, std::ios::binary);
+    cereal::JSONOutputArchive configArchive(fileStream);
+    features.serialize(configArchive);
+
+    return finalReservoirs;
 }

@@ -46,7 +46,6 @@ private:
     void drawSceneSelection();
     void drawViewModeSelection();
     void drawFeaturesToggles();
-    void drawExtraFeaturesToggles();
     void drawCameraStats();
     void drawRenderToFile();
     void drawBvhDebug();

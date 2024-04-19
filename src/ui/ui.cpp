@@ -66,8 +66,6 @@ void UiManager::drawProjectTab() {
     ImGui::Separator();
     drawFeaturesToggles();
     ImGui::Separator();
-    drawExtraFeaturesToggles();
-    ImGui::Separator();
     drawCameraStats();
     ImGui::Spacing();
     ImGui::Separator();
@@ -134,19 +132,6 @@ void UiManager::drawFeaturesToggles() {
         ImGui::Checkbox("BVH",                      &config.features.enableAccelStructure);
         ImGui::Checkbox("Texture mapping",          &config.features.enableTextureMapping);
         ImGui::Checkbox("Normal interpolation",     &config.features.enableNormalInterp);
-    }
-}
-
-void UiManager::drawExtraFeaturesToggles() {
-    if (ImGui::CollapsingHeader("Extra Features")) {
-        ImGui::Checkbox("Environment mapping",                          &config.features.extra.enableEnvironmentMapping);
-        ImGui::Checkbox("BVH SAH binning",                              &config.features.extra.enableBvhSahBinning);
-        ImGui::Checkbox("Bloom effect",                                 &config.features.extra.enableBloomEffect);
-        ImGui::Checkbox("Texture filtering(bilinear interpolation)",    &config.features.extra.enableBilinearTextureFiltering);
-        ImGui::Checkbox("Texture filtering(mipmapping)",                &config.features.extra.enableMipmapTextureFiltering);
-        ImGui::Checkbox("Glossy reflections",                           &config.features.extra.enableGlossyReflection);
-        ImGui::Checkbox("Transparency",                                 &config.features.extra.enableTransparency);
-        ImGui::Checkbox("Depth of field",                               &config.features.extra.enableDepthOfField);
     }
 }
 

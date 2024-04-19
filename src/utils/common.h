@@ -4,7 +4,12 @@ DISABLE_WARNINGS_PUSH()
 #include <glm/vec2.hpp>
 #include <glm/vec3.hpp>
 DISABLE_WARNINGS_POP()
+
 #include <framework/mesh.h>
+
+#include <cereal/archives/json.hpp>
+#include <cereal/types/common.hpp>
+#include <utils/magic_enum.hpp>
 
 enum class DrawMode {
     Filled,
@@ -57,27 +62,14 @@ struct PointLight {
 
 struct SegmentLight {
     glm::vec3 endpoint0, endpoint1; // Positions of endpoints
-    glm::vec3 color0, color1; // Color of endpoints
+    glm::vec3 color0, color1;       // Color of endpoints
 };
 
 struct ParallelogramLight {
     // A parallelogram light (see figure 3.14 of chapter 13.4.2 of Fundamentals of CG 4th Edition)
-    glm::vec3 v0; // v0
-    glm::vec3 edge01, edge02; // edges from v0 to v1, and from v0 to v2
+    glm::vec3 v0;               // v0
+    glm::vec3 edge01, edge02;   // Edges from v0 to v1, and from v0 to v2
     glm::vec3 color0, color1, color2, color3;
-};
-
-struct ExtraFeatures {
-    bool enableEnvironmentMapping       = false;
-    bool enableBvhSahBinning            = false;
-    bool enableMotionBlur               = false;
-    bool enableBloomEffect              = false;
-    bool enableBilinearTextureFiltering = false;
-    bool enableMipmapTextureFiltering   = false;
-    bool enableMultipleRaysPerPixel     = false;
-    bool enableGlossyReflection         = false;
-    bool enableTransparency             = false;
-    bool enableDepthOfField             = false;
 };
 
 struct Features {
@@ -122,5 +114,14 @@ struct Features {
     float gamma             = 1.0f;
     float exposure          = 1.5f;
 
-    ExtraFeatures extra = {};
+    template<class Archive>
+    void serialize(Archive& archive) const {
+        archive(CEREAL_NVP(enableShading), CEREAL_NVP(enableRecursive), CEREAL_NVP(enableHardShadow), CEREAL_NVP(enableSoftShadow), CEREAL_NVP(enableNormalInterp), CEREAL_NVP(enableTextureMapping), CEREAL_NVP(enableAccelStructure),
+                CEREAL_NVP(maxReflectionRecursion),
+                CEREAL_NVP(rayTraceMode), CEREAL_NVP(initialSamplesVisibilityCheck), CEREAL_NVP(numSamplesInReservoir), CEREAL_NVP(initialLightSamples), CEREAL_NVP(numNeighboursToSample), CEREAL_NVP(spatialResampleRadius),
+                CEREAL_NVP(maxIterationsMIS), CEREAL_NVP(misWeightRMIS), CEREAL_NVP(useProgressiveROMIS), CEREAL_NVP(progressiveUpdateMod),
+                CEREAL_NVP(unbiasedCombination), CEREAL_NVP(spatialReuse), CEREAL_NVP(spatialReuseVisibilityCheck), CEREAL_NVP(temporalReuse),
+                CEREAL_NVP(spatialResamplingPasses), CEREAL_NVP(temporalClampM),
+                CEREAL_NVP(enableToneMapping), CEREAL_NVP(gamma), CEREAL_NVP(exposure)); 
+    }
 };

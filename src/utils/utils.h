@@ -19,6 +19,7 @@ constexpr glm::vec3 SHADOW_RAY_NO_HIT_COLOR     = {0.0f, 1.0f, 1.0f};
 float constexpr ZERO_EPSILON                    = 1E-5F;
 
 // General purpose
+std::string currentTime();
 float zeroWithinEpsilon(float val);
 float linearMap(float val, float domainMin, float domainMax, float rangeMin, float rangeMax);
 template<typename T>

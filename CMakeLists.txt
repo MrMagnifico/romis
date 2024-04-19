@@ -36,4 +36,5 @@ target_compile_features(SeminarImpl PUBLIC cxx_std_20)
 
 # Preprocessor definitions for path(s)
 target_compile_definitions(CGFinProjLib INTERFACE
-	"-DDATA_DIR=\"${CMAKE_CURRENT_LIST_DIR}/data/\"")
+	"-DDATA_DIR=\"${CMAKE_CURRENT_LIST_DIR}/data/\""
+	"-DRENDERS_DIR=\"${CMAKE_CURRENT_LIST_DIR}/renders/\"")
