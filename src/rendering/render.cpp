@@ -66,7 +66,7 @@ void renderRMIS(const Scene& scene, const Trackball& camera, const BvhInterface&
     for (uint32_t iteration = 0U; iteration < features.maxIterationsMIS; iteration++) {
         ReservoirGrid reservoirGrid = genInitialSamples(scene, camera, bvh, screen, features);
 
-        std::cout << "Iteration " << iteration + 1 << std::endl;
+        std::cout << "= Iteration " << iteration + 1 << std::endl;
         progressbar progressBarPixels(windowResolution.y);
         #ifdef NDEBUG
         #pragma omp parallel for schedule(guided)
@@ -135,7 +135,7 @@ void renderROMIS(const Scene& scene, const Trackball& camera, const BvhInterface
     for (uint32_t iteration = 0U; iteration < features.maxIterationsMIS; iteration++) {
         ReservoirGrid reservoirGrid = genInitialSamples(scene, camera, bvh, screen, features);
 
-        std::cout << "Iteration " << iteration + 1 << std::endl;
+        std::cout << "= Iteration " << iteration + 1 << std::endl;
         progressbar progressbarPixels(static_cast<int32_t>(windowResolution.y));
         #ifdef NDEBUG
         #pragma omp parallel for schedule(guided)
@@ -218,6 +218,10 @@ void renderROMIS(const Scene& scene, const Trackball& camera, const BvhInterface
             progressbarPixels.update();
         }
         std::cout << std::endl;
+
+        // Save alphas visualisation if requested
+        if (features.saveAlphasVisualisation) { visualiseAlphas(techniqueMatrices, contributionVectorsRed, contributionVectorsGreen, contributionVectorsBlue,
+                                                                windowResolution, features); }
     }
 
     // Compute final results
@@ -253,10 +257,6 @@ void renderROMIS(const Scene& scene, const Trackball& camera, const BvhInterface
         }
         std::cout << std::endl;
     }
-
-    // Save alphas visualisation if requested
-    if (features.saveAlphasVisualisation) { visualiseAlphas(techniqueMatrices, contributionVectorsRed, contributionVectorsGreen, contributionVectorsBlue,
-                                                            windowResolution, features); }
 }
 
 
