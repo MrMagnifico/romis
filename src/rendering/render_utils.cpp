@@ -266,8 +266,7 @@ float arbitraryUnbiasedContributionWeightReciprocal(const LightSample& sample, c
     if (targetPdfValue == 0.0f) { return 0.0f; } // If target function value is zero, theoretical normalised PDF would also be zero
 
     // Compute mock unbiased contribution weight
-    float mockSampleWeight  = targetPdfValue *
-                              (1.0f / scene.lights.size()); // Samples all generated via uniform light sampling, so equal original PDF
+    float mockSampleWeight  = targetPdfValue / (1.0f / scene.lights.size()); // Samples all generated via uniform light sampling, so equal original PDF
     float arbitraryWeight   = (1.0f / targetPdfValue) *
                               (1.0f / pixel.sampleNums[sampleIdx]) * // Account for MIS weights in unbiased contribution because that's how it is in the rest of the codebas
                               (pixel.wSums[sampleIdx] - pixel.chosenSampleWeights[sampleIdx] + mockSampleWeight); // Emulate replacing weight of chosen sample with the given sample

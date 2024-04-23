@@ -64,9 +64,8 @@ void renderRMIS(const Scene& scene, const Trackball& camera, const BvhInterface&
     std::cout << "===== Rendering with R-MIS =====" << std::endl;
 
     for (uint32_t iteration = 0U; iteration < features.maxIterationsMIS; iteration++) {
-        ReservoirGrid reservoirGrid = genInitialSamples(scene, camera, bvh, screen, features);
-
         std::cout << "= Iteration " << iteration + 1 << std::endl;
+        ReservoirGrid reservoirGrid = genInitialSamples(scene, camera, bvh, screen, features);
         progressbar progressBarPixels(windowResolution.y);
         #ifdef NDEBUG
         #pragma omp parallel for schedule(guided)
@@ -133,9 +132,8 @@ void renderROMIS(const Scene& scene, const Trackball& camera, const BvhInterface
 
     std::cout << "===== Rendering with R-OMIS ====="   << std::endl;
     for (uint32_t iteration = 0U; iteration < features.maxIterationsMIS; iteration++) {
-        ReservoirGrid reservoirGrid = genInitialSamples(scene, camera, bvh, screen, features);
-
         std::cout << "= Iteration " << iteration + 1 << std::endl;
+        ReservoirGrid reservoirGrid = genInitialSamples(scene, camera, bvh, screen, features);
         progressbar progressbarPixels(static_cast<int32_t>(windowResolution.y));
         #ifdef NDEBUG
         #pragma omp parallel for schedule(guided)
