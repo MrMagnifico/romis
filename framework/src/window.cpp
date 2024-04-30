@@ -100,10 +100,11 @@ Window::Window(std::string_view title, const glm::ivec2& windowSize, OpenGLVersi
         //  their OpenGL version past 4.1 which released in 2010!
 #if !defined(__APPLE__) && defined(GL_DEBUG_SEVERITY_NOTIFICATION) && !defined(NDEBUG)
         // Custom debug message with breakpoints at the exact error. Only supported on OpenGL 4.3 and higher.
-        if (glVersionMajor > 4 || (glVersionMajor == 4 && glVersionMinor >= 3)) {
-            glDebugMessageCallback(glDebugCallback, nullptr);
-            glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
-        }
+        // TODO: Maybe renable these
+        // if (glVersionMajor > 4 || (glVersionMajor == 4 && glVersionMinor >= 3)) {
+        //     glDebugMessageCallback(glDebugCallback, nullptr);
+        //     glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
+        // }
 #endif
 
         // Setup Dear ImGui context.

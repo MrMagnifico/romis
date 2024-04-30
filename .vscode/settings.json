@@ -77,6 +77,16 @@
         "xstring": "cpp",
         "xtr1common": "cpp",
         "xtree": "cpp",
-        "xutility": "cpp"
+        "xutility": "cpp",
+        "complex": "cpp",
+        "condition_variable": "cpp",
+        "future": "cpp",
+        "set": "cpp",
+        "unordered_set": "cpp",
+        "valarray": "cpp",
+        "dense": "cpp",
+        "bitset": "cpp",
+        "regex": "cpp",
+        "typeindex": "cpp"
     }
 }
