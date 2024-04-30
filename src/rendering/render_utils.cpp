@@ -11,7 +11,7 @@
 #include <random>
 
 
-ReservoirGrid genInitialSamples(const Scene& scene, const Trackball& camera, const BvhInterface& bvh, const Screen& screen, const Features& features) {
+ReservoirGrid genInitialSamples(const Scene& scene, const Trackball& camera, const EmbreeInterface& embreeInterface, const Screen& screen, const Features& features) {
     glm::ivec2 windowResolution = screen.resolution();
     ReservoirGrid initialSamples(windowResolution.y, std::vector<Reservoir>(windowResolution.x, Reservoir(features.numSamplesInReservoir)));
 
@@ -25,7 +25,7 @@ ReservoirGrid genInitialSamples(const Scene& scene, const Trackball& camera, con
             const glm::vec2 normalizedPixelPos { float(x) / float(windowResolution.x) * 2.0f - 1.0f,
                                                  float(y) / float(windowResolution.y) * 2.0f - 1.0f };
             const Ray cameraRay     = camera.generateRay(normalizedPixelPos);
-            initialSamples[y][x]    = genCanonicalSamples(scene, bvh, features, cameraRay);
+            initialSamples[y][x]    = genCanonicalSamples(scene, embreeInterface, features, cameraRay);
         }
         #pragma omp critical
         progressbar.update();
@@ -34,10 +34,10 @@ ReservoirGrid genInitialSamples(const Scene& scene, const Trackball& camera, con
     return initialSamples;
 }
 
-glm::vec3 finalShading(const Reservoir& reservoir, const Ray& primaryRay, const BvhInterface& bvh, const Features& features) {
+glm::vec3 finalShading(const Reservoir& reservoir, const Ray& primaryRay, const EmbreeInterface& embreeInterface, const Features& features) {
     glm::vec3 finalColor(0.0f);
     for (const SampleData& sample : reservoir.outputSamples) {
-        glm::vec3 sampleColor   = testVisibilityLightSample(sample.lightSample.position, bvh, features, primaryRay, reservoir.hitInfo)              ?
+        glm::vec3 sampleColor   = testVisibilityLightSample(sample.lightSample.position, embreeInterface, features, primaryRay, reservoir.hitInfo)              ?
                                   computeShading(sample.lightSample.position, sample.lightSample.color, features, primaryRay, reservoir.hitInfo)    :
                                   glm::vec3(0.0f);
         sampleColor             *= sample.outputWeight;
@@ -101,7 +101,7 @@ ResampleIndicesGrid generateResampleIndicesGrid(const glm::ivec2& windowResoluti
     return resampleIndices;
 }
 
-void spatialReuse(ReservoirGrid& reservoirGrid, const BvhInterface& bvh, const Screen& screen, const Features& features) {
+void spatialReuse(ReservoirGrid& reservoirGrid, const EmbreeInterface& embreeInterface, const Screen& screen, const Features& features) {
     // Uniform selection of neighbours in N pixel Manhattan distance radius
     std::random_device rd;
     std::mt19937 gen(rd());
@@ -144,7 +144,7 @@ void spatialReuse(ReservoirGrid& reservoirGrid, const BvhInterface& bvh, const S
                 Reservoir combined(current.outputSamples.size());
                 combined.cameraRay  = current.cameraRay;
                 combined.hitInfo    = current.hitInfo;
-                if (features.unbiasedCombination)   { Reservoir::combineUnbiased(selected, combined, bvh, features); }
+                if (features.unbiasedCombination)   { Reservoir::combineUnbiased(selected, combined, embreeInterface, features); }
                 else                                { Reservoir::combineBiased(selected, combined, features); }
                 reservoirGrid[y][x] = combined;
             }
@@ -156,7 +156,7 @@ void spatialReuse(ReservoirGrid& reservoirGrid, const BvhInterface& bvh, const S
     }
 }
 
-void temporalReuse(ReservoirGrid& reservoirGrid, ReservoirGrid& previousFrameGrid, const BvhInterface& bvh,
+void temporalReuse(ReservoirGrid& reservoirGrid, ReservoirGrid& previousFrameGrid, const EmbreeInterface& embreeInterface,
                    Screen& screen, const Features& features) {
     glm::ivec2 windowResolution = screen.resolution();
 

@@ -1,7 +1,8 @@
-#include <scene/light.h>
+#include <ray_tracing/embree_interface.h>
 #include <rendering/render.h>
 #include <rendering/reservoir.h>
 #include <rendering/screen.h>
+#include <scene/light.h>
 #include <ui/draw.h>
 #include <ui/ui.h>
 #include <utils/config.h>
@@ -60,7 +61,7 @@ int main(int argc, char** argv) {
         SceneType sceneType = SceneType::CornellNightClub;
         std::optional<Ray> optDebugRay;
         Scene scene         = loadScenePrebuilt(sceneType, config.dataPath);
-        BvhInterface bvh(&scene);
+        EmbreeInterface embreeInterface(scene);
         std::shared_ptr<ReservoirGrid> previousFrameGrid;
 
         int bvhDebugLevel       = 0;
@@ -70,8 +71,8 @@ int main(int argc, char** argv) {
         ViewMode viewMode       = ViewMode::Rasterization;
         int selectedLightIdx    = scene.lights.empty() ? -1 : 0;
 
-        UiManager uiManager(bvh, camera, config, optDebugRay, previousFrameGrid, scene, sceneType, screen, viewMode, window,
-                            bvhDebugLevel, bvhDebugLeaf, debugBVHLevel, debugBVHLeaf, selectedLightIdx);
+        UiManager uiManager(embreeInterface, camera, config, optDebugRay, previousFrameGrid, scene, sceneType, screen, viewMode, window,
+                            selectedLightIdx);
 
         window.registerKeyCallback([&](int key, int /* scancode */, int action, int /* mods */) {
             if (action == GLFW_PRESS) {
@@ -136,7 +137,7 @@ int main(int argc, char** argv) {
                         enableDebugDraw = true;
                         glDisable(GL_LIGHTING);
                         glDepthFunc(GL_LEQUAL);
-                        (void) genCanonicalSamples(scene, bvh, config.features, *optDebugRay);
+                        (void) genCanonicalSamples(scene, embreeInterface, config.features, *optDebugRay);
                         enableDebugDraw = false;
                     }
                     glPopAttrib();
@@ -153,17 +154,13 @@ int main(int argc, char** argv) {
                         // https://learnopengl.com/Advanced-OpenGL/Blending
                         glEnable(GL_BLEND);
                         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-                        enableDebugDraw = true;
-                        if (debugBVHLevel)  { bvh.debugDrawLevel(bvhDebugLevel); }
-                        if (debugBVHLeaf)   { bvh.debugDrawLeaf(bvhDebugLeaf); }
-                        enableDebugDraw = false;
                         glPopAttrib();
                     }
                 } break;
                 case ViewMode::RayTraced: {
                     const auto start                        = std::chrono::high_resolution_clock::now();
                     screen.clear(glm::vec3(0.0f));
-                    std::optional<ReservoirGrid> maybeGrid  = renderRayTraced(previousFrameGrid, scene, camera, bvh, screen, config.features);
+                    std::optional<ReservoirGrid> maybeGrid  = renderRayTraced(previousFrameGrid, scene, camera, embreeInterface, screen, config.features);
                     if (maybeGrid) { previousFrameGrid      = std::make_shared<ReservoirGrid>(maybeGrid.value()); }
                     screen.setPixel(0, 0, glm::vec3(1.0f));
                     screen.draw(); // Takes the image generated using ray tracing and outputs it to the screen using OpenGL.
@@ -203,7 +200,7 @@ int main(int argc, char** argv) {
                        }),
             config.scene);
 
-        BvhInterface bvh { &scene };
+        EmbreeInterface embreeInterface(scene);
         std::shared_ptr<ReservoirGrid> previousFrameGrid;
 
         // Create output directory if it does not exist.
@@ -219,7 +216,7 @@ int main(int argc, char** argv) {
                 screen.clear(glm::vec3(0.0f));
                 Trackball camera { &window, glm::radians(cameraConfig.fieldOfView), cameraConfig.distanceFromLookAt };
                 camera.setCamera(cameraConfig.lookAt, glm::radians(cameraConfig.rotation), cameraConfig.distanceFromLookAt);
-                std::optional<ReservoirGrid> maybeGrid  = renderRayTraced(previousFrameGrid, scene, camera, bvh, screen, config.features);
+                std::optional<ReservoirGrid> maybeGrid  = renderRayTraced(previousFrameGrid, scene, camera, embreeInterface, screen, config.features);
                 if (maybeGrid) { previousFrameGrid      = std::make_shared<ReservoirGrid>(maybeGrid.value()); }
                 const auto filename_base                = fmt::format("{}_{}_cam_{}", sceneName, start_time_string, index);
                 const auto filepath                     = config.outputDir / (filename_base + ".bmp");

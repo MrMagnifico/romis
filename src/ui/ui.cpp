@@ -20,11 +20,11 @@ DISABLE_WARNINGS_POP()
 #include <variant>
 
 
-UiManager::UiManager(BvhInterface& bvh, Trackball& camera, Config& config, std::optional<Ray>& optDebugRay,
+UiManager::UiManager(EmbreeInterface& embreeInterface, Trackball& camera, Config& config, std::optional<Ray>& optDebugRay,
                      std::shared_ptr<ReservoirGrid>& previousFrameGrid, Scene& scene, SceneType& sceneType,
                      Screen& screen, ViewMode& viewMode, Window& window,
-                     int& bvhDebugLevel, int& bvhDebugLeaf, bool& debugBVHLevel, bool& debugBVHLeaf, int& selectedLightIdx)
-    : bvh(bvh)
+                     int& selectedLightIdx)
+    : embreeInterface(embreeInterface)
     , camera(camera)
     , config(config)
     , optDebugRay(optDebugRay)
@@ -34,10 +34,6 @@ UiManager::UiManager(BvhInterface& bvh, Trackball& camera, Config& config, std::
     , screen(screen)
     , viewMode(viewMode)
     , window(window)
-    , bvhDebugLevel(bvhDebugLevel)
-    , bvhDebugLeaf(bvhDebugLeaf)
-    , debugBVHLevel(debugBVHLevel)
-    , debugBVHLeaf(debugBVHLeaf)
     , selectedLightIdx(selectedLightIdx)
 {}
 
@@ -72,9 +68,6 @@ void UiManager::drawProjectTab() {
     drawRenderToFile();
     ImGui::Spacing();
     ImGui::Separator();
-    drawBvhDebug();
-    ImGui::Spacing();
-    ImGui::Separator();
     drawLightControls();
 }
 
@@ -107,10 +100,10 @@ void UiManager::drawSceneSelection() {
         optDebugRay.reset();
         scene               = loadScenePrebuilt(sceneType, config.dataPath);
         selectedLightIdx    = scene.lights.empty() ? -1 : 0;
-        bvh                 = BvhInterface(&scene);
+        embreeInterface.changeScene(scene);
         if (optDebugRay) {
             HitInfo dummy {};
-            bvh.intersect(*optDebugRay, dummy, config.features);
+            embreeInterface.closestHit(*optDebugRay, dummy);
         }
     }
 }
@@ -162,7 +155,7 @@ void UiManager::drawRenderToFile() {
             // Perform a new render and measure the time it took to generate the image.
             using clock                             = std::chrono::high_resolution_clock;
             const auto start                        = clock::now();
-            std::optional<ReservoirGrid> maybeGrid  = renderRayTraced(previousFrameGrid, scene, camera, bvh, screen, config.features);
+            std::optional<ReservoirGrid> maybeGrid  = renderRayTraced(previousFrameGrid, scene, camera, embreeInterface, screen, config.features);
             if (maybeGrid) { previousFrameGrid      = std::make_shared<ReservoirGrid>(maybeGrid.value()); }
             const auto end                          = clock::now();
             std::cout << "Time to render image: " << std::chrono::duration<float, std::milli>(end - start).count() << " milliseconds" << std::endl;
@@ -170,16 +163,6 @@ void UiManager::drawRenderToFile() {
             // Store the new image
             screen.writeBitmapToFile(outPath);
         }
-    }
-}
-
-void UiManager::drawBvhDebug() {
-    ImGui::Text("Debugging");
-    if (viewMode == ViewMode::Rasterization) {
-        ImGui::Checkbox("Draw BVH Level", &debugBVHLevel);
-        if (debugBVHLevel)  { ImGui::SliderInt("BVH Level", &bvhDebugLevel, 0, bvh.numLevels() - 1); }
-        ImGui::Checkbox("Draw BVH Leaf", &debugBVHLeaf);
-        if (debugBVHLeaf)   { ImGui::SliderInt("BVH Leaf", &bvhDebugLeaf, 1, bvh.numLeaves() - 1); }
     }
 }
 

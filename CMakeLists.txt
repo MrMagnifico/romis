@@ -16,6 +16,8 @@ else()
 	set(REFERENCE_MODE ON)
 endif()
 
+set(embree_DIR "C:/embree-4.3.1/lib/cmake/embree-4.3.1/") # Replace with directory to local Embree installation
+find_package(embree REQUIRED)
 find_package(OpenGL REQUIRED)
 find_package(OpenMP REQUIRED)
 
@@ -24,7 +26,7 @@ enable_sanitizers(CGFinProjLib)
 set_project_warnings(CGFinProjLib)
 include(${CMAKE_CURRENT_LIST_DIR}/src/CMakeLists.txt)
 target_include_directories(CGFinProjLib INTERFACE "${CMAKE_CURRENT_LIST_DIR}/src/")
-target_link_libraries(CGFinProjLib INTERFACE CGFramework OpenGL::GLU OpenMP::OpenMP_CXX)
+target_link_libraries(CGFinProjLib INTERFACE CGFramework OpenGL::GLU OpenMP::OpenMP_CXX embree)
 target_compile_features(CGFinProjLib INTERFACE cxx_std_20)
 
 # Main executable config

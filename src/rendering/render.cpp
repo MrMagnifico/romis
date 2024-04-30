@@ -23,12 +23,12 @@
 
 ReservoirGrid renderReSTIR(std::shared_ptr<ReservoirGrid> previousFrameGrid,
                            const Scene& scene, const Trackball& camera,
-                           const BvhInterface& bvh, Screen& screen,
+                           const EmbreeInterface& embreeInterface, Screen& screen,
                            const Features& features) {
     std::cout << "===== Rendering with ReSTIR =====" << std::endl;
-    ReservoirGrid reservoirGrid = genInitialSamples(scene, camera, bvh, screen, features);
-    if (features.temporalReuse && previousFrameGrid)    { temporalReuse(reservoirGrid, *previousFrameGrid.get(), bvh, screen, features); }
-    if (features.spatialReuse)                          { spatialReuse(reservoirGrid, bvh, screen, features); }
+    ReservoirGrid reservoirGrid = genInitialSamples(scene, camera, embreeInterface, screen, features);
+    if (features.temporalReuse && previousFrameGrid)    { temporalReuse(reservoirGrid, *previousFrameGrid.get(), embreeInterface, screen, features); }
+    if (features.spatialReuse)                          { spatialReuse(reservoirGrid, embreeInterface, screen, features); }
 
     // Final shading
     glm::ivec2 windowResolution = screen.resolution();
@@ -41,7 +41,7 @@ ReservoirGrid renderReSTIR(std::shared_ptr<ReservoirGrid> previousFrameGrid,
         for (int x = 0; x != windowResolution.x; x++) {
             // Compute shading from final sample(s)
             const Reservoir& reservoir  = reservoirGrid[y][x];
-            glm::vec3 finalColor        = finalShading(reservoir, reservoir.cameraRay, bvh, features);
+            glm::vec3 finalColor        = finalShading(reservoir, reservoir.cameraRay, embreeInterface, features);
 
             // Apply tone mapping and set final pixel color
             if (features.enableToneMapping) { finalColor = exposureToneMapping(finalColor, features); }
@@ -56,7 +56,7 @@ ReservoirGrid renderReSTIR(std::shared_ptr<ReservoirGrid> previousFrameGrid,
     return reservoirGrid;
 }
 
-void renderRMIS(const Scene& scene, const Trackball& camera, const BvhInterface& bvh, Screen& screen, const Features& features) {
+void renderRMIS(const Scene& scene, const Trackball& camera, const EmbreeInterface& embreeInterface, Screen& screen, const Features& features) {
     glm::ivec2 windowResolution         = screen.resolution();
     const uint32_t totalDistributions   = features.numNeighboursToSample + 1U; // Original pixel and neighbours
     ResampleIndicesGrid resampleIndices = generateResampleIndicesGrid(windowResolution, features);
@@ -65,7 +65,7 @@ void renderRMIS(const Scene& scene, const Trackball& camera, const BvhInterface&
 
     for (uint32_t iteration = 0U; iteration < features.maxIterationsMIS; iteration++) {
         std::cout << "= Iteration " << iteration + 1 << std::endl;
-        ReservoirGrid reservoirGrid = genInitialSamples(scene, camera, bvh, screen, features);
+        ReservoirGrid reservoirGrid = genInitialSamples(scene, camera, embreeInterface, screen, features);
         progressbar progressBarPixels(windowResolution.y);
         #ifdef NDEBUG
         #pragma omp parallel for schedule(guided)
@@ -94,7 +94,7 @@ void renderRMIS(const Scene& scene, const Trackball& camera, const BvhInterface&
                         }
 
                         // Evaluate sample contribution
-                        glm::vec3 sampleColor   = testVisibilityLightSample(sample.lightSample.position, bvh, features, primaryRay, primaryHitInfo)             ?
+                        glm::vec3 sampleColor   = testVisibilityLightSample(sample.lightSample.position, embreeInterface, features, primaryRay, primaryHitInfo)             ?
                                                   computeShading(sample.lightSample.position, sample.lightSample.color, features, primaryRay, primaryHitInfo)   :
                                                   glm::vec3(0.0f);
                         finalColor              += (misWeight * sampleColor * sample.outputWeight) / glm::vec3(static_cast<float>(pixel.outputSamples.size()));
@@ -112,7 +112,7 @@ void renderRMIS(const Scene& scene, const Trackball& camera, const BvhInterface&
     combineToScreen(screen, finalPixelColors, features);
 }
 
-void renderROMIS(const Scene& scene, const Trackball& camera, const BvhInterface& bvh, Screen& screen, const Features& features) {
+void renderROMIS(const Scene& scene, const Trackball& camera, const EmbreeInterface& embreeInterface, Screen& screen, const Features& features) {
     // Used in both direct and progressive estimators
     glm::ivec2 windowResolution             = screen.resolution();
     ResampleIndicesGrid resampleIndices     = generateResampleIndicesGrid(windowResolution, features);
@@ -133,7 +133,7 @@ void renderROMIS(const Scene& scene, const Trackball& camera, const BvhInterface
     std::cout << "===== Rendering with R-OMIS ====="   << std::endl;
     for (uint32_t iteration = 0U; iteration < features.maxIterationsMIS; iteration++) {
         std::cout << "= Iteration " << iteration + 1 << std::endl;
-        ReservoirGrid reservoirGrid = genInitialSamples(scene, camera, bvh, screen, features);
+        ReservoirGrid reservoirGrid = genInitialSamples(scene, camera, embreeInterface, screen, features);
         progressbar progressbarPixels(static_cast<int32_t>(windowResolution.y));
         #ifdef NDEBUG
         #pragma omp parallel for schedule(guided)
@@ -177,7 +177,7 @@ void renderROMIS(const Scene& scene, const Trackball& camera, const BvhInterface
                         }
 
                         // Evaluate shading (integrand function) for the current sample
-                        glm::vec3 sampleColor = testVisibilityLightSample(sample.lightSample.position, bvh, features, primaryRay, primaryHitInfo)           ?
+                        glm::vec3 sampleColor = testVisibilityLightSample(sample.lightSample.position, embreeInterface, features, primaryRay, primaryHitInfo)           ?
                                                 computeShading(sample.lightSample.position, sample.lightSample.color, features, primaryRay, primaryHitInfo) :
                                                 glm::vec3(0.0f);
 
@@ -260,14 +260,14 @@ void renderROMIS(const Scene& scene, const Trackball& camera, const BvhInterface
 
 std::optional<ReservoirGrid> renderRayTraced(std::shared_ptr<ReservoirGrid> previousFrameGrid,
                                              const Scene& scene, const Trackball& camera,
-                                             const BvhInterface& bvh, Screen& screen,
+                                             const EmbreeInterface& embreeInterface, Screen& screen,
                                              const Features& features) {
     // Render with desired mode
     std::optional<ReservoirGrid> finalReservoirs = std::nullopt;
     switch (features.rayTraceMode) {
-        case RayTraceMode::ReSTIR:  { finalReservoirs = renderReSTIR(previousFrameGrid, scene, camera, bvh, screen, features); } break;
-        case RayTraceMode::RMIS:    { renderRMIS(scene, camera, bvh, screen, features); } break;
-        case RayTraceMode::ROMIS:   { renderROMIS(scene, camera, bvh, screen, features); } break;
+        case RayTraceMode::ReSTIR:  { finalReservoirs = renderReSTIR(previousFrameGrid, scene, camera, embreeInterface, screen, features); } break;
+        case RayTraceMode::RMIS:    { renderRMIS(scene, camera, embreeInterface, screen, features); } break;
+        case RayTraceMode::ROMIS:   { renderROMIS(scene, camera, embreeInterface, screen, features); } break;
         default:                    { throw std::runtime_error("Unsupported ray-tracing render mode requested from entry point"); }
     }
 
