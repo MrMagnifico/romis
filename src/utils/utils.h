@@ -2,7 +2,7 @@
 #ifndef _UTILS_HPP_
 #define _UTILS_HPP_
 
-#include <ray_tracing/bvh_interface.h>
+#include <ray_tracing/embree_interface.h>
 #include <utils/common.h>
 
 #include <framework/disable_all_warnings.h>
@@ -27,7 +27,7 @@ inline bool inRangeInclusive(T val, T low, T high) { return low <= val && val <=
 
 // Convenience or base project
 glm::vec3 diffuseAlbedo(const HitInfo& hitInfo, const Features& features);
-bool testVisibilityLightSample(const glm::vec3& samplePos, const BvhInterface& bvh, const Features& features, Ray ray, HitInfo hitInfo);
+bool testVisibilityLightSample(const glm::vec3& samplePos, const EmbreeInterface& embreeInterface, const Features& features, Ray ray, HitInfo hitInfo);
 
 // Embree
 void errorFunction(void* userPtr, enum RTCError error, const char* str);

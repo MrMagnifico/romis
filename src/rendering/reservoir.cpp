@@ -65,7 +65,7 @@ void Reservoir::combineBiased(const std::span<Reservoir>& reservoirStream, Reser
     }
 }
 
-void Reservoir::combineUnbiased(const std::span<Reservoir>& reservoirStream, Reservoir& finalReservoir, const BvhInterface& bvh, const Features& features) {
+void Reservoir::combineUnbiased(const std::span<Reservoir>& reservoirStream, Reservoir& finalReservoir, const EmbreeInterface& embreeInterface, const Features& features) {
     // Process reservoir stream sample-by-sample
     std::vector<size_t> totalSampleCounts(finalReservoir.outputSamples.size(), 0ULL);
     for (const Reservoir& reservoir : reservoirStream) {
@@ -87,7 +87,7 @@ void Reservoir::combineUnbiased(const std::span<Reservoir>& reservoirStream, Res
         for (size_t outputSampleIdx = 0ULL; outputSampleIdx < finalReservoir.outputSamples.size(); outputSampleIdx++) {
             const SampleData& finalReservoirSample  = finalReservoir.outputSamples[outputSampleIdx]; 
             float pdfValue                          = targetPDF(finalReservoirSample.lightSample, reservoir.cameraRay, reservoir.hitInfo, features);
-            if (features.spatialReuseVisibilityCheck)   { pdfValue *= testVisibilityLightSample(finalReservoirSample.lightSample.position, bvh, features, reservoir.cameraRay, reservoir.hitInfo); }
+            if (features.spatialReuseVisibilityCheck)   { pdfValue *= testVisibilityLightSample(finalReservoirSample.lightSample.position, embreeInterface, features, reservoir.cameraRay, reservoir.hitInfo); }
             if (pdfValue > 0.0f)                        { numValidSamples[outputSampleIdx] += reservoir.totalSampleNums(); }
         }
     }

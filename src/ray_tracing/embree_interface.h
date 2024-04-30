@@ -14,10 +14,17 @@ public:
     EmbreeInterface(const Scene& scene);
     ~EmbreeInterface();
 
+    void changeScene(const Scene& scene);
+    bool anyHit(Ray& ray) const;
+    bool closestHit(Ray& ray, HitInfo& hitInfo) const;
+
 private:
-    void populateVertexDataBuffers(glm::vec3* positionBuffer, glm::vec2* texCoordBuffer,
+    void initDevice();
+    void initScene(const Scene& scene);
+    void populateVertexDataBuffers(glm::vec3* positionBuffer, glm::vec3* normalBuffer, glm::vec2* texCoordBuffer,
                                    const std::vector<Vertex>& vertices);
     void populateIndexBuffer(glm::uvec3* indexBuffer, const std::vector<glm::uvec3>& indices);
+    RTCRayHit constructEmbreeRay(const Ray& ray) const;
 
     RTCDevice m_device;
     RTCScene m_scene;

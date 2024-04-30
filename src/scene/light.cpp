@@ -36,14 +36,14 @@ void sampleParallelogramLight(const ParallelogramLight& parallelogramLight, glm:
 // Given an intersection, computes the contribution from all light sources at the intersection point
 // in this method you should cycle the light sources and for each one compute their contribution
 // don't forget to check for visibility (shadows!)
-Reservoir genCanonicalSamples(const Scene& scene, const BvhInterface& bvh, const Features& features, Ray ray) {
+Reservoir genCanonicalSamples(const Scene& scene, const EmbreeInterface& embreeInterface, const Features& features, Ray ray) {
     Reservoir reservoir(features.numSamplesInReservoir);
     
     // No lights to sample, just return
     if (scene.lights.size() == 0UL) { return reservoir; }
     
     // Compute camera ray intersection with scene
-    bool intersectScene = bvh.intersect(ray, reservoir.hitInfo, features);
+    bool intersectScene = embreeInterface.closestHit(ray, reservoir.hitInfo);
     reservoir.cameraRay = ray;
     if (!intersectScene) {   
         drawRay(ray, CAMERA_RAY_NO_HIT_COLOR);  // Draw a red debug ray if the ray missed
@@ -88,7 +88,7 @@ Reservoir genCanonicalSamples(const Scene& scene, const BvhInterface& bvh, const
 
     // Set output weight and do optional visibility check
     for (size_t reservoirIdx = 0ULL; reservoirIdx < reservoir.outputSamples.size(); reservoirIdx++)  {
-        if (features.initialSamplesVisibilityCheck && !testVisibilityLightSample(reservoir.outputSamples[reservoirIdx].lightSample.position, bvh, features, ray, reservoir.hitInfo)) {
+        if (features.initialSamplesVisibilityCheck && !testVisibilityLightSample(reservoir.outputSamples[reservoirIdx].lightSample.position, embreeInterface, features, ray, reservoir.hitInfo)) {
             reservoir.outputSamples[reservoirIdx].outputWeight = 0.0f;
         } else {
             float pdfValue = targetPDF(reservoir.outputSamples[reservoirIdx].lightSample, reservoir.cameraRay, reservoir.hitInfo, features);

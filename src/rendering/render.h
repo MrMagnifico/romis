@@ -24,13 +24,13 @@ struct Features;
 // All rendering modes on offer
 ReservoirGrid renderReSTIR(std::shared_ptr<ReservoirGrid> previousFrameGrid,
                            const Scene& scene, const Trackball& camera,
-                           const BvhInterface& bvh, Screen& screen,
+                           const EmbreeInterface& embreeInterface, Screen& screen,
                            const Features& features);
-void renderRMIS(const Scene& scene, const Trackball& camera, const BvhInterface& bvh, Screen& screen, const Features& features);
-void renderROMIS(const Scene& scene, const Trackball& camera, const BvhInterface& bvh, Screen& screen, const Features& features);
+void renderRMIS(const Scene& scene, const Trackball& camera, const EmbreeInterface& embreeInterface, Screen& screen, const Features& features);
+void renderROMIS(const Scene& scene, const Trackball& camera, const EmbreeInterface& embreeInterface, Screen& screen, const Features& features);
 
 // Entry point to ray-tracing rendering modes
 std::optional<ReservoirGrid> renderRayTraced(std::shared_ptr<ReservoirGrid> previousFrameGrid,
                                              const Scene& scene, const Trackball& camera,
-                                             const BvhInterface& bvh, Screen& screen,
+                                             const EmbreeInterface& embreeInterface, Screen& screen,
                                              const Features& features);
