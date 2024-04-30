@@ -29,6 +29,9 @@ inline bool inRangeInclusive(T val, T low, T high) { return low <= val && val <=
 glm::vec3 diffuseAlbedo(const HitInfo& hitInfo, const Features& features);
 bool testVisibilityLightSample(const glm::vec3& samplePos, const BvhInterface& bvh, const Features& features, Ray ray, HitInfo hitInfo);
 
+// Embree
+void errorFunction(void* userPtr, enum RTCError error, const char* str);
+
 // Framework
 void setOpenGLMatrices(const Trackball& camera);
 

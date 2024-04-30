@@ -1,7 +1,8 @@
-#include <scene/light.h>
+#include <ray_tracing/embree_interface.h>
 #include <rendering/render.h>
 #include <rendering/reservoir.h>
 #include <rendering/screen.h>
+#include <scene/light.h>
 #include <ui/draw.h>
 #include <ui/ui.h>
 #include <utils/config.h>
@@ -60,6 +61,7 @@ int main(int argc, char** argv) {
         SceneType sceneType = SceneType::CornellNightClub;
         std::optional<Ray> optDebugRay;
         Scene scene         = loadScenePrebuilt(sceneType, config.dataPath);
+        EmbreeInterface embreeInterface(scene);
         BvhInterface bvh(&scene);
         std::shared_ptr<ReservoirGrid> previousFrameGrid;
 

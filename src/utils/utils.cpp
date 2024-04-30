@@ -3,6 +3,8 @@ DISABLE_WARNINGS_PUSH()
 #include <glm/gtc/type_ptr.hpp>
 DISABLE_WARNINGS_POP()
 
+#include <embree4/rtcore.h>
+
 #include <framework/opengl_includes.h>
 
 #include <scene/texture.h>
@@ -52,6 +54,10 @@ bool testVisibilityLightSample(const glm::vec3& samplePos, const BvhInterface& b
     }
     drawRay(shadowRay, SHADOW_RAY_INTERSECT_COLOR);
     return false;
+}
+
+void errorFunction(void* userPtr, enum RTCError error, const char* str) {
+    std::cout << std::format("[EMBREE] {}: {}", magic_enum::enum_name(error), str) << std::endl;
 }
 
 void setOpenGLMatrices(const Trackball& camera) {

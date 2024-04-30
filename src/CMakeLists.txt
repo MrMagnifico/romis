@@ -4,6 +4,7 @@ target_sources(CGFinProjLib
         
         "${CMAKE_CURRENT_LIST_DIR}/ray_tracing/bounding_volume_hierarchy.cpp"
         "${CMAKE_CURRENT_LIST_DIR}/ray_tracing/bvh_interface.cpp"
+        "${CMAKE_CURRENT_LIST_DIR}/ray_tracing/embree_interface.cpp"
         "${CMAKE_CURRENT_LIST_DIR}/ray_tracing/interpolate.cpp"
         "${CMAKE_CURRENT_LIST_DIR}/ray_tracing/intersect.cpp"
         
