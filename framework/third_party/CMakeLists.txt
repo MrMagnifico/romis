@@ -1,7 +1,6 @@
 add_subdirectory("glm")
 add_subdirectory("fmt")
 if (NOT FRAMEWORK_BASIC_LIBRARY)
-	add_subdirectory("eigen-3.4.0")
 	add_subdirectory("tinyobjloader")
 	add_subdirectory("glad")
 	add_subdirectory("glfw3")
