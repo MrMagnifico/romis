@@ -1,6 +1,8 @@
 #pragma once
 #include <framework/disable_all_warnings.h>
 DISABLE_WARNINGS_PUSH()
+#include <cereal/archives/json.hpp>
+#include <cereal/types/common.hpp>
 #include <glm/vec2.hpp>
 #include <glm/vec3.hpp>
 DISABLE_WARNINGS_POP()
@@ -8,8 +10,6 @@ DISABLE_WARNINGS_POP()
 #include <framework/ray.h>
 #include <framework/mesh.h>
 
-#include <cereal/archives/json.hpp>
-#include <cereal/types/common.hpp>
 #include <utils/magic_enum.hpp>
 
 enum class DrawMode {
@@ -31,6 +31,13 @@ enum class RayTraceMode {
 enum class MISWeightRMIS {
     Equal = 0,
     Balance
+};
+
+enum class NeighbourSelectionStrategy {
+    Random = 0,
+    Similar,
+    Dissimilar,
+    EqualSimilarDissimilar
 };
 
 struct HitInfo {
@@ -100,11 +107,12 @@ struct Features {
     uint32_t spatialResampleRadius      = 10U;
 
     // R-MIS/R-OMIS parameter(s)
-    uint32_t maxIterationsMIS       = 5U;
-    MISWeightRMIS misWeightRMIS     = MISWeightRMIS::Equal;
-    bool useProgressiveROMIS        = false;
-    uint32_t progressiveUpdateMod   = 1U;
-    bool saveAlphasVisualisation    = true;
+    uint32_t maxIterationsMIS                               = 5U;
+    NeighbourSelectionStrategy neighbourSelectionStrategy   = NeighbourSelectionStrategy::Random;
+    MISWeightRMIS misWeightRMIS                             = MISWeightRMIS::Equal;
+    bool useProgressiveROMIS                                = false;
+    uint32_t progressiveUpdateMod                           = 1U;
+    bool saveAlphasVisualisation                            = true;
 
     // ReSTIR feature flags
     bool unbiasedCombination            = false;
@@ -126,7 +134,7 @@ struct Features {
         archive(CEREAL_NVP(enableShading), CEREAL_NVP(enableRecursive), CEREAL_NVP(enableHardShadow), CEREAL_NVP(enableSoftShadow), CEREAL_NVP(enableNormalInterp), CEREAL_NVP(enableTextureMapping), CEREAL_NVP(enableAccelStructure),
                 CEREAL_NVP(maxReflectionRecursion),
                 CEREAL_NVP(rayTraceMode), CEREAL_NVP(initialSamplesVisibilityCheck), CEREAL_NVP(numSamplesInReservoir), CEREAL_NVP(initialLightSamples), CEREAL_NVP(numNeighboursToSample), CEREAL_NVP(spatialResampleRadius),
-                CEREAL_NVP(maxIterationsMIS), CEREAL_NVP(misWeightRMIS), CEREAL_NVP(useProgressiveROMIS), CEREAL_NVP(progressiveUpdateMod), CEREAL_NVP(saveAlphasVisualisation),
+                CEREAL_NVP(maxIterationsMIS), CEREAL_NVP(neighbourSelectionStrategy), CEREAL_NVP(misWeightRMIS), CEREAL_NVP(useProgressiveROMIS), CEREAL_NVP(progressiveUpdateMod), CEREAL_NVP(saveAlphasVisualisation),
                 CEREAL_NVP(unbiasedCombination), CEREAL_NVP(spatialReuse), CEREAL_NVP(spatialReuseVisibilityCheck), CEREAL_NVP(temporalReuse),
                 CEREAL_NVP(spatialResamplingPasses), CEREAL_NVP(temporalClampM),
                 CEREAL_NVP(enableToneMapping), CEREAL_NVP(gamma), CEREAL_NVP(exposure)); 

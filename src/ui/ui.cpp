@@ -302,6 +302,11 @@ void UiManager::drawRayTracingParams() {
         // R-MIS/R-OMIS parameters
         ImGui::Text("R-MIS / R-OMIS");
         ImGui::SliderInt("Max iterations",  (int*) &config.features.maxIterationsMIS, 1, 16);
+        constexpr auto neighbourSelectionStrategies = magic_enum::enum_names<NeighbourSelectionStrategy>();
+        std::vector<const char*> neighbourSelectionStrategiesPointers;
+        std::transform(std::begin(neighbourSelectionStrategies), std::end(neighbourSelectionStrategies), std::back_inserter(neighbourSelectionStrategiesPointers),
+                       [](const auto& str) { return str.data(); });
+        ImGui::Combo("Neighbour selection strategy", (int*) &config.features.neighbourSelectionStrategy, neighbourSelectionStrategiesPointers.data(), static_cast<int>(neighbourSelectionStrategiesPointers.size()));
         constexpr auto misWeights = magic_enum::enum_names<MISWeightRMIS>();
         std::vector<const char*> misWeightPointers;
         std::transform(std::begin(misWeights), std::end(misWeights), std::back_inserter(misWeightPointers),

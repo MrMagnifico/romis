@@ -1,12 +1,15 @@
 #include "render.h"
 
+#include <framework/disable_all_warnings.h>
+DISABLE_WARNINGS_PUSH()
+#include <cereal/archives/json.hpp>
+DISABLE_WARNINGS_POP()
+
 #ifdef NDEBUG
 #include <omp.h>
 #endif
 
 #include <framework/trackball.h>
-
-#include <cereal/archives/json.hpp>
 
 #include <post_processing/tone_mapping.h>
 #include <rendering/neighbour_selection.h>
@@ -63,7 +66,7 @@ void renderRMIS(const Scene& scene, const Trackball& camera, const EmbreeInterfa
     glm::ivec2 windowResolution         = screen.resolution();
     const uint32_t totalDistributions   = features.numNeighboursToSample + 1U; // Original pixel and neighbours
     PrimaryHitGrid primaryHits          = genPrimaryRayHits(scene, camera, embreeInterface, screen, features);
-    ResampleIndicesGrid resampleIndices = generateResampleIndicesGrid(windowResolution, features);
+    ResampleIndicesGrid resampleIndices = generateResampleIndicesGrid(primaryHits, windowResolution, features);
     PixelGrid finalPixelColors(windowResolution.y,   std::vector<glm::vec3>(windowResolution.x, glm::vec3(0.0f)));
 
     for (uint32_t iteration = 0U; iteration < features.maxIterationsMIS; iteration++) {
@@ -120,7 +123,7 @@ void renderROMIS(const Scene& scene, const Trackball& camera, const EmbreeInterf
     std::cout << "===== Rendering with R-OMIS ====="   << std::endl;
     glm::ivec2 windowResolution             = screen.resolution();
     PrimaryHitGrid primaryHits              = genPrimaryRayHits(scene, camera, embreeInterface, screen, features);
-    ResampleIndicesGrid resampleIndices     = generateResampleIndicesGrid(windowResolution, features);
+    ResampleIndicesGrid resampleIndices     = generateResampleIndicesGrid(primaryHits, windowResolution, features);
     const uint32_t totalDistributions       = features.numNeighboursToSample + 1U; // Original pixel and neighbours
     MatrixGrid techniqueMatrices(windowResolution.y,        std::vector<Eigen::MatrixXf>(windowResolution.x, Eigen::MatrixXf::Zero(totalDistributions, totalDistributions)));
     VectorGrid contributionVectorsRed(windowResolution.y,   std::vector<Eigen::VectorXf>(windowResolution.x, Eigen::VectorXf::Zero(totalDistributions)));

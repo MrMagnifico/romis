@@ -7,21 +7,20 @@ DISABLE_WARNINGS_PUSH()
 #include <glm/vec2.hpp>
 DISABLE_WARNINGS_POP()
 
+#include <rendering/render_utils.h>
 #include <utils/common.h>
 
 #include <vector>
 
+
 using ResampleIndicesGrid = std::vector<std::vector<std::vector<glm::ivec2>>>;
 
-enum class NeighbourSelectionStrategy {
-    Random = 0,
-    Similar,
-    Dissimilar,
-    EqualSimilarDissimilar
-};
-
+bool areSimilar(const RayHit& lhs, const RayHit& rhs, const Features& features);
 std::vector<glm::ivec2> indicesRandom(int32_t x, int32_t y,
                                       const glm::ivec2& windowResolution, const Features& features);
-ResampleIndicesGrid generateResampleIndicesGrid(const glm::ivec2& windowResolution, const Features& features);
+std::vector<glm::ivec2> indicesSimilarity(int32_t x, int32_t y,
+                                          const PrimaryHitGrid& primaryHits, const glm::ivec2& windowResolution, const Features& features);
+ResampleIndicesGrid generateResampleIndicesGrid(const PrimaryHitGrid& primaryHits,
+                                                const glm::ivec2& windowResolution, const Features& features);
 
 #endif // _NEIGHBOUR_SELECTION_H_
