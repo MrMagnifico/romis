@@ -5,6 +5,7 @@ DISABLE_WARNINGS_PUSH()
 #include <glm/vec3.hpp>
 DISABLE_WARNINGS_POP()
 
+#include <framework/ray.h>
 #include <framework/mesh.h>
 
 #include <cereal/archives/json.hpp>
@@ -37,6 +38,11 @@ struct HitInfo {
     glm::vec3 barycentricCoord;
     glm::vec2 texCoord;
     Material material;
+};
+
+struct RayHit {
+    Ray ray;
+    HitInfo hit;
 };
 
 struct Plane {

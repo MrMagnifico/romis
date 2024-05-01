@@ -66,8 +66,11 @@ bool EmbreeInterface::closestHit(Ray& ray, HitInfo& hitInfo) const {
     RTCRayHit rayhit = constructEmbreeRay(ray);
     rtcIntersect1(m_scene, &rayhit);
 
-    // No intersection: return false
-    if (rayhit.hit.geomID == RTC_INVALID_GEOMETRY_ID) { return false; };
+    // No intersection: draw no hit debug ray and return false
+    if (rayhit.hit.geomID == RTC_INVALID_GEOMETRY_ID) {
+        drawRay(ray, CAMERA_RAY_NO_HIT_COLOR);
+        return false;
+    };
 
     // Intersection: update hit info and user ray
     rtcInterpolate0(rtcGetGeometry(m_scene, rayhit.hit.geomID), rayhit.hit.primID, rayhit.hit.u, rayhit.hit.v,
@@ -79,7 +82,8 @@ bool EmbreeInterface::closestHit(Ray& ray, HitInfo& hitInfo) const {
     hitInfo.material    = m_meshToMaterial.at(rayhit.hit.geomID);
     ray.t               = rayhit.ray.tfar;
 
-    // Debug draw normal and return true
+    // Debug draw ray and normal, then return true
+    drawRay(ray, CAMERA_RAY_HIT_COLOR);
     drawRay({ray.origin + (ray.t * ray.direction), hitInfo.normal, 1.0f}, hitInfo.material.kd);
     return true;
 }

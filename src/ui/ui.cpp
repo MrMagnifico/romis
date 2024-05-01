@@ -20,14 +20,14 @@ DISABLE_WARNINGS_POP()
 #include <variant>
 
 
-UiManager::UiManager(EmbreeInterface& embreeInterface, Trackball& camera, Config& config, std::optional<Ray>& optDebugRay,
+UiManager::UiManager(EmbreeInterface& embreeInterface, Trackball& camera, Config& config, std::optional<RayHit>& optDebugRayHit,
                      std::shared_ptr<ReservoirGrid>& previousFrameGrid, Scene& scene, SceneType& sceneType,
                      Screen& screen, ViewMode& viewMode, Window& window,
                      int& selectedLightIdx)
     : embreeInterface(embreeInterface)
     , camera(camera)
     , config(config)
-    , optDebugRay(optDebugRay)
+    , optDebugRayHit(optDebugRayHit)
     , previousFrameGrid(previousFrameGrid)
     , scene(scene)
     , sceneType(sceneType)
@@ -97,13 +97,13 @@ void UiManager::drawSceneSelection() {
         "Custom",
     };
     if (ImGui::Combo("Scenes", reinterpret_cast<int*>(&sceneType), items.data(), int(items.size()))) {
-        optDebugRay.reset();
+        optDebugRayHit.reset();
         scene               = loadScenePrebuilt(sceneType, config.dataPath);
         selectedLightIdx    = scene.lights.empty() ? -1 : 0;
         embreeInterface.changeScene(scene);
-        if (optDebugRay) {
+        if (optDebugRayHit) {
             HitInfo dummy {};
-            embreeInterface.closestHit(*optDebugRay, dummy);
+            embreeInterface.closestHit((*optDebugRayHit).ray, dummy);
         }
     }
 }

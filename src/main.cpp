@@ -59,7 +59,7 @@ int main(int argc, char** argv) {
         camera.setCamera(config.cameras[0].lookAt, glm::radians(config.cameras[0].rotation), config.cameras[0].distanceFromLookAt);
 
         SceneType sceneType = SceneType::CornellNightClub;
-        std::optional<Ray> optDebugRay;
+        std::optional<RayHit> optDebugRayHit;
         Scene scene         = loadScenePrebuilt(sceneType, config.dataPath);
         EmbreeInterface embreeInterface(scene);
         std::shared_ptr<ReservoirGrid> previousFrameGrid;
@@ -71,7 +71,7 @@ int main(int argc, char** argv) {
         ViewMode viewMode       = ViewMode::Rasterization;
         int selectedLightIdx    = scene.lights.empty() ? -1 : 0;
 
-        UiManager uiManager(embreeInterface, camera, config, optDebugRay, previousFrameGrid, scene, sceneType, screen, viewMode, window,
+        UiManager uiManager(embreeInterface, camera, config, optDebugRayHit, previousFrameGrid, scene, sceneType, screen, viewMode, window,
                             selectedLightIdx);
 
         window.registerKeyCallback([&](int key, int /* scancode */, int action, int /* mods */) {
@@ -79,8 +79,9 @@ int main(int argc, char** argv) {
                 switch (key) {
                     // Shoot a ray. Produce a ray from camera to the far plane.
                     case GLFW_KEY_R: {
-                        const auto tmp  = window.getNormalizedCursorPos();
-                        optDebugRay     = camera.generateRay(tmp * 2.0f - 1.0f);
+                        optDebugRayHit.emplace();
+                        const auto tmp              = window.getNormalizedCursorPos();
+                        optDebugRayHit.value().ray  = camera.generateRay(tmp * 2.0f - 1.0f);
                         break;
                     }
                     case GLFW_KEY_A: {
@@ -131,13 +132,13 @@ int main(int argc, char** argv) {
                     } else {
                         drawSceneOpenGL(scene);
                     }
-                    if (optDebugRay) {
+                    if (optDebugRayHit) {
                         // Call getFinalColor for the debug ray. Ignore the result but tell the function that it should
                         // draw the rays instead.
                         enableDebugDraw = true;
                         glDisable(GL_LIGHTING);
                         glDepthFunc(GL_LEQUAL);
-                        (void) genCanonicalSamples(scene, embreeInterface, config.features, *optDebugRay);
+                        embreeInterface.closestHit(optDebugRayHit.value().ray, optDebugRayHit.value().hit);
                         enableDebugDraw = false;
                     }
                     glPopAttrib();
