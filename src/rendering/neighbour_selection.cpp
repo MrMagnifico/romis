@@ -3,11 +3,21 @@
 #include <algorithm>
 #include <random>
 
+
 bool areSimilar(const RayHit& lhs, const RayHit& rhs, const Features& features) {
-    // TODO: Expand to user-adjustable values (and maybe additional properties)
-    float depthFracDiff     = std::abs(1.0f - (lhs.ray.t / rhs.ray.t));             // Depth difference (greater than 10% leads to rejection) 
-    float normalsDotProd    = glm::dot(lhs.hit.normal, rhs.hit.normal);             // Normal difference (greater than 25 degrees leads to rejection)
-    if (depthFracDiff > 0.1f || normalsDotProd < 0.90630778703f) { return false; }  // TODO: Apply R&L instead of this lemming bullshit
+    // Same geometries
+    if (features.neighbourSameGeometry && lhs.hit.geometryId != rhs.hit.geometryId) { return false; }
+    
+    // Depth difference
+    float depthFracDiff = std::abs(1.0f - (lhs.ray.t / rhs.ray.t)); 
+    if (depthFracDiff > features.neighbourMaxDepthDifferenceFraction) { return false; }
+
+    // Normal angle difference
+    float maxDiffCos        = std::cos(features.neighbourMaxNormalAngleDifferenceRadians);
+    float normalsDotProd    = glm::dot(lhs.hit.normal, rhs.hit.normal);
+    if (normalsDotProd < features.neighbourMaxNormalAngleDifferenceRadians) { return false; }
+
+    // We passed the similarity test!
     return true;
 }
 

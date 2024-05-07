@@ -80,6 +80,7 @@ bool EmbreeInterface::closestHit(Ray& ray, HitInfo& hitInfo) const {
     rtcInterpolate0(rtcGetGeometry(m_scene, rayhit.hit.geomID), rayhit.hit.primID, rayhit.hit.u, rayhit.hit.v,
                     RTC_BUFFER_TYPE_VERTEX_ATTRIBUTE,   1, glm::value_ptr(hitInfo.texCoord),            2);
     hitInfo.material    = m_meshToMaterial.at(rayhit.hit.geomID);
+    hitInfo.geometryId  = rayhit.hit.geomID;
     ray.t               = rayhit.ray.tfar;
 
     // Debug draw ray and normal, then return true

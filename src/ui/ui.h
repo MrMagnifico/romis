@@ -48,6 +48,7 @@ private:
 
     // Ray-tracing UI bits
     void drawRayTracingTab();
+    void drawRayTracingNeighbourSelectionParams();
     void drawRayTracingFeaturesToggles();
     void drawRayTracingParams();
 

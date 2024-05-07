@@ -45,6 +45,7 @@ struct HitInfo {
     glm::vec3 barycentricCoord;
     glm::vec2 texCoord;
     Material material;
+    uint32_t geometryId;
 };
 
 struct RayHit {
@@ -105,6 +106,11 @@ struct Features {
     uint32_t initialLightSamples        = 32U;
     uint32_t numNeighboursToSample      = 5U;
     uint32_t spatialResampleRadius      = 10U;
+
+    // Neighbour selection heuristics controls
+    bool neighbourSameGeometry                      = false;
+    float neighbourMaxDepthDifferenceFraction       = 0.10f;
+    float neighbourMaxNormalAngleDifferenceRadians  = 0.436332f;
 
     // R-MIS/R-OMIS parameter(s)
     uint32_t maxIterationsMIS                               = 5U;

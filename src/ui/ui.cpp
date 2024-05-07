@@ -72,6 +72,9 @@ void UiManager::drawProjectTab() {
 }
 
 void UiManager::drawRayTracingTab() {
+    drawRayTracingNeighbourSelectionParams();
+    ImGui::Spacing();
+    ImGui::Separator();
     drawRayTracingFeaturesToggles();
     ImGui::Spacing();
     ImGui::Separator();
@@ -254,6 +257,14 @@ void UiManager::drawLightControls() {
     if (selectedLightIdx >= 0 && ImGui::Button("Remove selected light")) {
         scene.lights.erase(std::begin(scene.lights) + selectedLightIdx);
         selectedLightIdx = -1;
+    }
+}
+
+void UiManager::drawRayTracingNeighbourSelectionParams() {
+    if (ImGui::CollapsingHeader("Neighbour Selection Heuristics", ImGuiTreeNodeFlags_DefaultOpen)) {
+        ImGui::Checkbox("Same geometry", &config.features.neighbourSameGeometry);
+        ImGui::SliderFloat("Max depth difference fraction", &config.features.neighbourMaxDepthDifferenceFraction, 0.01f, 1.0f);
+        ImGui::SliderAngle("Max normal angle difference", &config.features.neighbourMaxNormalAngleDifferenceRadians, 0.0f, 90.0f);
     }
 }
 
