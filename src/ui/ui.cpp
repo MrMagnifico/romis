@@ -20,14 +20,14 @@ DISABLE_WARNINGS_POP()
 #include <variant>
 
 
-UiManager::UiManager(EmbreeInterface& embreeInterface, Trackball& camera, Config& config, std::optional<Ray>& optDebugRay,
+UiManager::UiManager(EmbreeInterface& embreeInterface, Trackball& camera, Config& config, std::optional<RayHit>& optDebugRayHit,
                      std::shared_ptr<ReservoirGrid>& previousFrameGrid, Scene& scene, SceneType& sceneType,
                      Screen& screen, ViewMode& viewMode, Window& window,
                      int& selectedLightIdx)
     : embreeInterface(embreeInterface)
     , camera(camera)
     , config(config)
-    , optDebugRay(optDebugRay)
+    , optDebugRayHit(optDebugRayHit)
     , previousFrameGrid(previousFrameGrid)
     , scene(scene)
     , sceneType(sceneType)
@@ -72,6 +72,9 @@ void UiManager::drawProjectTab() {
 }
 
 void UiManager::drawRayTracingTab() {
+    drawRayTracingNeighbourSelectionParams();
+    ImGui::Spacing();
+    ImGui::Separator();
     drawRayTracingFeaturesToggles();
     ImGui::Spacing();
     ImGui::Separator();
@@ -97,13 +100,13 @@ void UiManager::drawSceneSelection() {
         "Custom",
     };
     if (ImGui::Combo("Scenes", reinterpret_cast<int*>(&sceneType), items.data(), int(items.size()))) {
-        optDebugRay.reset();
+        optDebugRayHit.reset();
         scene               = loadScenePrebuilt(sceneType, config.dataPath);
         selectedLightIdx    = scene.lights.empty() ? -1 : 0;
         embreeInterface.changeScene(scene);
-        if (optDebugRay) {
+        if (optDebugRayHit) {
             HitInfo dummy {};
-            embreeInterface.closestHit(*optDebugRay, dummy);
+            embreeInterface.closestHit((*optDebugRayHit).ray, dummy);
         }
     }
 }
@@ -257,6 +260,14 @@ void UiManager::drawLightControls() {
     }
 }
 
+void UiManager::drawRayTracingNeighbourSelectionParams() {
+    if (ImGui::CollapsingHeader("Neighbour Selection Heuristics", ImGuiTreeNodeFlags_DefaultOpen)) {
+        ImGui::Checkbox("Same geometry", &config.features.neighbourSameGeometry);
+        ImGui::SliderFloat("Max depth difference fraction", &config.features.neighbourMaxDepthDifferenceFraction, 0.01f, 1.0f);
+        ImGui::SliderAngle("Max normal angle difference", &config.features.neighbourMaxNormalAngleDifferenceRadians, 0.0f, 90.0f);
+    }
+}
+
 void UiManager::drawRayTracingFeaturesToggles() {
     if (ImGui::CollapsingHeader("Features", ImGuiTreeNodeFlags_DefaultOpen)) {
         ImGui::Text("Common");
@@ -302,6 +313,11 @@ void UiManager::drawRayTracingParams() {
         // R-MIS/R-OMIS parameters
         ImGui::Text("R-MIS / R-OMIS");
         ImGui::SliderInt("Max iterations",  (int*) &config.features.maxIterationsMIS, 1, 16);
+        constexpr auto neighbourSelectionStrategies = magic_enum::enum_names<NeighbourSelectionStrategy>();
+        std::vector<const char*> neighbourSelectionStrategiesPointers;
+        std::transform(std::begin(neighbourSelectionStrategies), std::end(neighbourSelectionStrategies), std::back_inserter(neighbourSelectionStrategiesPointers),
+                       [](const auto& str) { return str.data(); });
+        ImGui::Combo("Neighbour selection strategy", (int*) &config.features.neighbourSelectionStrategy, neighbourSelectionStrategiesPointers.data(), static_cast<int>(neighbourSelectionStrategiesPointers.size()));
         constexpr auto misWeights = magic_enum::enum_names<MISWeightRMIS>();
         std::vector<const char*> misWeightPointers;
         std::transform(std::begin(misWeights), std::end(misWeights), std::back_inserter(misWeightPointers),

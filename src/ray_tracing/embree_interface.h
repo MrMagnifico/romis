@@ -19,6 +19,9 @@ public:
     bool closestHit(Ray& ray, HitInfo& hitInfo) const;
 
 private:
+    static constexpr glm::vec3 CAMERA_RAY_HIT_COLOR        = {0.0f, 1.0f, 0.0f};
+    static constexpr glm::vec3 CAMERA_RAY_NO_HIT_COLOR     = {1.0f, 0.0f, 0.0f};
+
     void initDevice();
     void initScene(const Scene& scene);
     void populateVertexDataBuffers(glm::vec3* positionBuffer, glm::vec3* normalBuffer, glm::vec2* texCoordBuffer,

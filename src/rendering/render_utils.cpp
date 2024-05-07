@@ -10,13 +10,12 @@
 #include <algorithm>
 #include <random>
 
-
-ReservoirGrid genInitialSamples(const Scene& scene, const Trackball& camera, const EmbreeInterface& embreeInterface, const Screen& screen, const Features& features) {
+PrimaryHitGrid genPrimaryRayHits(const Scene& scene, const Trackball& camera, const EmbreeInterface& embreeInterface, const Screen& screen, const Features& features) {
     glm::ivec2 windowResolution = screen.resolution();
-    ReservoirGrid initialSamples(windowResolution.y, std::vector<Reservoir>(windowResolution.x, Reservoir(features.numSamplesInReservoir)));
+    PrimaryHitGrid primaryHits(windowResolution.y, std::vector<RayHit>(windowResolution.x));
 
     progressbar progressbar(windowResolution.y);
-    std::cout << "Initial sample generation..." << std::endl;
+    std::cout << "Primary rays computation..." << std::endl;
     #ifdef NDEBUG
     #pragma omp parallel for schedule(guided)
     #endif
@@ -24,8 +23,26 @@ ReservoirGrid genInitialSamples(const Scene& scene, const Trackball& camera, con
         for (int x = 0; x != windowResolution.x; x++) {
             const glm::vec2 normalizedPixelPos { float(x) / float(windowResolution.x) * 2.0f - 1.0f,
                                                  float(y) / float(windowResolution.y) * 2.0f - 1.0f };
-            const Ray cameraRay     = camera.generateRay(normalizedPixelPos);
-            initialSamples[y][x]    = genCanonicalSamples(scene, embreeInterface, features, cameraRay);
+            primaryHits[y][x].ray = camera.generateRay(normalizedPixelPos); 
+            embreeInterface.closestHit(primaryHits[y][x].ray, primaryHits[y][x].hit);
+        }
+        #pragma omp critical
+        progressbar.update();
+    }
+    std::cout << std::endl;
+    return primaryHits;
+}
+
+ReservoirGrid genInitialSamples(const PrimaryHitGrid& primaryHits, const Scene& scene, const EmbreeInterface& embreeInterface, const Features& features, const glm::ivec2& windowResolution) {
+    ReservoirGrid initialSamples(windowResolution.y, std::vector<Reservoir>(windowResolution.x, Reservoir(features.numSamplesInReservoir)));
+    progressbar progressbar(windowResolution.y);
+    std::cout << "Initial light samples generation..." << std::endl;
+    #ifdef NDEBUG
+    #pragma omp parallel for schedule(guided)
+    #endif
+    for (int y = 0; y < windowResolution.y; y++) {
+        for (int x = 0; x != windowResolution.x; x++) {
+            initialSamples[y][x] = genCanonicalSamples(scene, embreeInterface, features, primaryHits[y][x]);
         }
         #pragma omp critical
         progressbar.update();
@@ -65,40 +82,6 @@ void combineToScreen(Screen& screen, const PixelGrid& finalPixelColors, const Fe
         progressbarPixels.update();
     }
     std::cout << std::endl;
-}
-
-std::vector<glm::ivec2> candidateIndices(int32_t x, int32_t y,
-                                         const glm::ivec2& windowResolution, const Features& features) {
-    // Define the range of possible values based on window dimensions and resample radius
-    std::random_device rd;
-    std::mt19937 gen(rd());
-    int32_t resampleRadiusCast = static_cast<int32_t>(features.spatialResampleRadius);
-    std::uniform_int_distribution<> distrX(std::max(0, x - resampleRadiusCast),
-                                           std::min(windowResolution.x - 1, x + resampleRadiusCast));
-    std::uniform_int_distribution<> distrY(std::max(0, y - resampleRadiusCast),
-                                           std::min(windowResolution.y - 1, y + resampleRadiusCast));
-
-    // Create indices
-    std::vector<glm::ivec2> indices;
-    indices.reserve(features.numNeighboursToSample + 1);    // Assign enough space for current pixel AND neighbours
-    indices.push_back(glm::ivec2(x, y));                    // Always include the pixel itself
-    for (uint32_t candidateIdx = 0U; candidateIdx < features.numNeighboursToSample; candidateIdx++) {
-        indices.push_back(glm::ivec2(distrX(gen), distrY(gen)));
-    }
-    return indices;
-}
-
-ResampleIndicesGrid generateResampleIndicesGrid(const glm::ivec2& windowResolution, const Features& features) {
-    ResampleIndicesGrid resampleIndices(windowResolution.y, std::vector<std::vector<glm::ivec2>>(windowResolution.x));
-    #ifdef NDEBUG
-    #pragma omp parallel for schedule(guided)
-    #endif
-    for (int y = 0; y < windowResolution.y; y++) {
-        for (int x = 0; x != windowResolution.x; x++) {
-            resampleIndices[y][x] = candidateIndices(x, y, windowResolution, features);
-        }
-    }
-    return resampleIndices;
 }
 
 void spatialReuse(ReservoirGrid& reservoirGrid, const EmbreeInterface& embreeInterface, const Screen& screen, const Features& features) {

@@ -1,14 +1,18 @@
 #include "render.h"
 
+#include <framework/disable_all_warnings.h>
+DISABLE_WARNINGS_PUSH()
+#include <cereal/archives/json.hpp>
+DISABLE_WARNINGS_POP()
+
 #ifdef NDEBUG
 #include <omp.h>
 #endif
 
 #include <framework/trackball.h>
 
-#include <cereal/archives/json.hpp>
-
 #include <post_processing/tone_mapping.h>
+#include <rendering/neighbour_selection.h>
 #include <rendering/render_utils.h>
 #include <rendering/screen.h>
 #include <scene/light.h>
@@ -26,7 +30,8 @@ ReservoirGrid renderReSTIR(std::shared_ptr<ReservoirGrid> previousFrameGrid,
                            const EmbreeInterface& embreeInterface, Screen& screen,
                            const Features& features) {
     std::cout << "===== Rendering with ReSTIR =====" << std::endl;
-    ReservoirGrid reservoirGrid = genInitialSamples(scene, camera, embreeInterface, screen, features);
+    PrimaryHitGrid primaryHits  = genPrimaryRayHits(scene, camera, embreeInterface, screen, features);
+    ReservoirGrid reservoirGrid = genInitialSamples(primaryHits, scene, embreeInterface, features, screen.resolution());
     if (features.temporalReuse && previousFrameGrid)    { temporalReuse(reservoirGrid, *previousFrameGrid.get(), embreeInterface, screen, features); }
     if (features.spatialReuse)                          { spatialReuse(reservoirGrid, embreeInterface, screen, features); }
 
@@ -57,15 +62,16 @@ ReservoirGrid renderReSTIR(std::shared_ptr<ReservoirGrid> previousFrameGrid,
 }
 
 void renderRMIS(const Scene& scene, const Trackball& camera, const EmbreeInterface& embreeInterface, Screen& screen, const Features& features) {
+    std::cout << "===== Rendering with R-MIS =====" << std::endl;
     glm::ivec2 windowResolution         = screen.resolution();
     const uint32_t totalDistributions   = features.numNeighboursToSample + 1U; // Original pixel and neighbours
-    ResampleIndicesGrid resampleIndices = generateResampleIndicesGrid(windowResolution, features);
+    PrimaryHitGrid primaryHits          = genPrimaryRayHits(scene, camera, embreeInterface, screen, features);
+    ResampleIndicesGrid resampleIndices = generateResampleIndicesGrid(primaryHits, windowResolution, features);
     PixelGrid finalPixelColors(windowResolution.y,   std::vector<glm::vec3>(windowResolution.x, glm::vec3(0.0f)));
-    std::cout << "===== Rendering with R-MIS =====" << std::endl;
 
     for (uint32_t iteration = 0U; iteration < features.maxIterationsMIS; iteration++) {
         std::cout << "= Iteration " << iteration + 1 << std::endl;
-        ReservoirGrid reservoirGrid = genInitialSamples(scene, camera, embreeInterface, screen, features);
+        ReservoirGrid reservoirGrid = genInitialSamples(primaryHits, scene, embreeInterface, features, windowResolution);
         progressbar progressBarPixels(windowResolution.y);
         #ifdef NDEBUG
         #pragma omp parallel for schedule(guided)
@@ -114,8 +120,10 @@ void renderRMIS(const Scene& scene, const Trackball& camera, const EmbreeInterfa
 
 void renderROMIS(const Scene& scene, const Trackball& camera, const EmbreeInterface& embreeInterface, Screen& screen, const Features& features) {
     // Used in both direct and progressive estimators
+    std::cout << "===== Rendering with R-OMIS ====="   << std::endl;
     glm::ivec2 windowResolution             = screen.resolution();
-    ResampleIndicesGrid resampleIndices     = generateResampleIndicesGrid(windowResolution, features);
+    PrimaryHitGrid primaryHits              = genPrimaryRayHits(scene, camera, embreeInterface, screen, features);
+    ResampleIndicesGrid resampleIndices     = generateResampleIndicesGrid(primaryHits, windowResolution, features);
     const uint32_t totalDistributions       = features.numNeighboursToSample + 1U; // Original pixel and neighbours
     MatrixGrid techniqueMatrices(windowResolution.y,        std::vector<Eigen::MatrixXf>(windowResolution.x, Eigen::MatrixXf::Zero(totalDistributions, totalDistributions)));
     VectorGrid contributionVectorsRed(windowResolution.y,   std::vector<Eigen::VectorXf>(windowResolution.x, Eigen::VectorXf::Zero(totalDistributions)));
@@ -130,10 +138,9 @@ void renderROMIS(const Scene& scene, const Trackball& camera, const EmbreeInterf
     const int32_t totalSamples              = totalDistributions * features.numSamplesInReservoir; // All pixels generate the same number of samples and sample the same number of neighbours
     const int32_t fractionOfTotalSamples    = features.numSamplesInReservoir / totalDistributions; // Redundant? Yes. Helps with code clarity? Also yes
 
-    std::cout << "===== Rendering with R-OMIS ====="   << std::endl;
     for (uint32_t iteration = 0U; iteration < features.maxIterationsMIS; iteration++) {
         std::cout << "= Iteration " << iteration + 1 << std::endl;
-        ReservoirGrid reservoirGrid = genInitialSamples(scene, camera, embreeInterface, screen, features);
+        ReservoirGrid reservoirGrid = genInitialSamples(primaryHits, scene, embreeInterface, features, windowResolution);
         progressbar progressbarPixels(static_cast<int32_t>(windowResolution.y));
         #ifdef NDEBUG
         #pragma omp parallel for schedule(guided)
