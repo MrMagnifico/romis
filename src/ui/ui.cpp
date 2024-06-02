@@ -38,7 +38,7 @@ UiManager::UiManager(EmbreeInterface& embreeInterface, Trackball& camera, Config
 {}
 
 void UiManager::draw() {
-    ImGui::Begin("Seminar Implementation");
+    ImGui::Begin("RMIS Implementation");
     ImGui::BeginTabBar("Options");
     if (ImGui::BeginTabItem("Ray Tracing")) {
         drawRayTracingTab();
@@ -304,7 +304,7 @@ void UiManager::drawRayTracingParams() {
         ImGui::Text("Common");
         ImGui::SliderInt("Samples per reservoir",   (int*) &config.features.numSamplesInReservoir,      1, 32);
         ImGui::SliderInt("Canonical sample count",  (int*) &config.features.initialLightSamples,        1, 256);
-        ImGui::SliderInt("Neighbours to sample",    (int*) &config.features.numNeighboursToSample,      1, 10);
+        ImGui::SliderInt("Neighbours to sample",    (int*) &config.features.numNeighboursToSample,      0, 10);
         ImGui::SliderInt("Spatial resample radius", (int*) &config.features.spatialResampleRadius,      1, 30);
 
         ImGui::Spacing();

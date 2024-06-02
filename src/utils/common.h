@@ -108,13 +108,13 @@ struct Features {
     uint32_t spatialResampleRadius      = 10U;
 
     // Neighbour selection heuristics controls
-    bool neighbourSameGeometry                      = false;
+    bool neighbourSameGeometry                      = true;
     float neighbourMaxDepthDifferenceFraction       = 0.10f;
     float neighbourMaxNormalAngleDifferenceRadians  = 0.436332f;
 
     // R-MIS/R-OMIS parameter(s)
     uint32_t maxIterationsMIS                               = 5U;
-    NeighbourSelectionStrategy neighbourSelectionStrategy   = NeighbourSelectionStrategy::Random;
+    NeighbourSelectionStrategy neighbourSelectionStrategy   = NeighbourSelectionStrategy::Similar;
     MISWeightRMIS misWeightRMIS                             = MISWeightRMIS::Equal;
     bool useProgressiveROMIS                                = false;
     uint32_t progressiveUpdateMod                           = 1U;
