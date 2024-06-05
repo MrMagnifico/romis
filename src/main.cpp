@@ -6,6 +6,7 @@
 #include <ui/draw.h>
 #include <ui/ui.h>
 #include <utils/config.h>
+#include <utils/progressbar.hpp>
 #include <utils/utils.h>
 
 // Suppress warnings in third-party code.
@@ -17,6 +18,7 @@ DISABLE_WARNINGS_PUSH()
 #include <glm/mat4x4.hpp>
 #include <glm/vec2.hpp>
 #include <glm/vec4.hpp>
+#include <glm/gtx/transform.hpp>
 #include <imgui/imgui.h>
 #include <nativefiledialog/nfd.h>
 DISABLE_WARNINGS_POP()
@@ -58,9 +60,9 @@ int main(int argc, char** argv) {
         Trackball camera    { &window, glm::radians(config.cameras[0].fieldOfView), config.cameras[0].distanceFromLookAt };
         camera.setCamera(config.cameras[0].lookAt, glm::radians(config.cameras[0].rotation), config.cameras[0].distanceFromLookAt);
 
-        SceneType sceneType = SceneType::CornellNightClub;
+        SceneType sceneType = SceneType::ModernHall;
         std::optional<RayHit> optDebugRayHit;
-        Scene scene         = loadScenePrebuilt(sceneType, config.dataPath);
+        Scene scene         = loadScenePrebuilt(sceneType, config.dataPath, camera, config.features);
         EmbreeInterface embreeInterface(scene);
         std::shared_ptr<ReservoirGrid> previousFrameGrid;
 
@@ -104,6 +106,97 @@ int main(int argc, char** argv) {
                 };
             }
         });
+
+        // Render R-OMIS convergence results
+        std::cout << "Rendering convergence results..." << std::endl;
+        std::filesystem::path resultsDir = std::filesystem::path(RENDERS_DIR) / "Final Results - Draft" / "convergence" / "modern-hall";
+        std::optional<ReservoirGrid> maybeGrid;
+        progressbar progressbarIterations(16);
+        for (uint32_t maxIterations = 1U; maxIterations <= 16U; maxIterations++) {
+            config.features.maxIterationsMIS = maxIterations;
+
+            // R-MIS - Equal
+            std::filesystem::path outPath           = resultsDir / "rmis" / "equal" / std::format("{} iters.bmp", maxIterations);
+            config.features.rayTraceMode            = RayTraceMode::RMIS;
+            config.features.misWeightRMIS           = MISWeightRMIS::Equal;
+            std::optional<ReservoirGrid> maybeGrid  = renderRayTraced(previousFrameGrid, scene, camera, embreeInterface, screen, config.features);
+            if (maybeGrid) { previousFrameGrid      = std::make_shared<ReservoirGrid>(maybeGrid.value()); }
+            screen.writeBitmapToFile(outPath);
+
+            // R-MIS - Balance
+            outPath                                 = resultsDir / "rmis" / "balance" / std::format("{} iters.bmp", maxIterations);
+            config.features.rayTraceMode            = RayTraceMode::RMIS;
+            config.features.misWeightRMIS           = MISWeightRMIS::Balance;
+            maybeGrid                               = renderRayTraced(previousFrameGrid, scene, camera, embreeInterface, screen, config.features);
+            if (maybeGrid) { previousFrameGrid      = std::make_shared<ReservoirGrid>(maybeGrid.value()); }
+            screen.writeBitmapToFile(outPath);
+
+            // R-OMIS - Direct
+            outPath                                 = resultsDir / "romis" / "direct" / std::format("{} iters.bmp", maxIterations);
+            config.features.rayTraceMode            = RayTraceMode::ROMIS;
+            config.features.useProgressiveROMIS     = false;
+            maybeGrid                               = renderRayTraced(previousFrameGrid, scene, camera, embreeInterface, screen, config.features);
+            if (maybeGrid) { previousFrameGrid      = std::make_shared<ReservoirGrid>(maybeGrid.value()); }
+            screen.writeBitmapToFile(outPath);
+
+            // R-OMIS - Progressive (U = 1)
+            outPath                                 = resultsDir / "romis" / "u1" / std::format("{} iters.bmp", maxIterations);
+            config.features.rayTraceMode            = RayTraceMode::ROMIS;
+            config.features.useProgressiveROMIS     = true;
+            config.features.progressiveUpdateMod    = 1U;
+            maybeGrid                               = renderRayTraced(previousFrameGrid, scene, camera, embreeInterface, screen, config.features);
+            if (maybeGrid) { previousFrameGrid      = std::make_shared<ReservoirGrid>(maybeGrid.value()); }
+            screen.writeBitmapToFile(outPath);
+
+            // R-OMIS - Progressive (U = 2)
+            outPath                                 = resultsDir / "romis" / "u2" / std::format("{} iters.bmp", maxIterations);
+            config.features.rayTraceMode            = RayTraceMode::ROMIS;
+            config.features.useProgressiveROMIS     = true;
+            config.features.progressiveUpdateMod    = 2U;
+            maybeGrid                               = renderRayTraced(previousFrameGrid, scene, camera, embreeInterface, screen, config.features);
+            if (maybeGrid) { previousFrameGrid      = std::make_shared<ReservoirGrid>(maybeGrid.value()); }
+            screen.writeBitmapToFile(outPath);
+
+            // R-OMIS - Progressive (U = 4)
+            outPath                                 = resultsDir / "romis" / "u4" / std::format("{} iters.bmp", maxIterations);
+            config.features.rayTraceMode            = RayTraceMode::ROMIS;
+            config.features.useProgressiveROMIS     = true;
+            config.features.progressiveUpdateMod    = 4U;
+            maybeGrid                               = renderRayTraced(previousFrameGrid, scene, camera, embreeInterface, screen, config.features);
+            if (maybeGrid) { previousFrameGrid      = std::make_shared<ReservoirGrid>(maybeGrid.value()); }
+            screen.writeBitmapToFile(outPath);
+
+            progressbarIterations.update();
+        }
+
+        // Render R-OMIS neighbour count/reservoir size numbers
+        // std::cout << "Rendering neighbour count/reservoir size variations" << std::endl;
+        // resultsDir                                  = std::filesystem::path(RENDERS_DIR) / "Final Results - Draft" / "neighbour-count-reservoir-size" / "modern-hall";
+        // config.features.rayTraceMode                = RayTraceMode::ROMIS;
+        // config.features.useProgressiveROMIS         = false;
+        // std::vector<int32_t> initialCandidateCounts = {16, 64, 256};
+        // std::vector<int32_t> reservoirSizes         = {2, 4, 6, 8, 10, 12, 14, 16};
+        // std::vector<int32_t> neighbourCounts        = {0, 2, 4, 6, 8};
+        // progressbar progressBarCandidates(initialCandidateCounts.size());
+        // for (int32_t initialCandidates : initialCandidateCounts) {
+        //     progressbar progressbarSizes(reservoirSizes.size());
+        //     for (int32_t reservoirSize : reservoirSizes) {
+        //         progressbar progressbarCounts(neighbourCounts.size());
+        //         for (int32_t neighbourCount : neighbourCounts) {
+        //             std::filesystem::path outPath           = resultsDir / std::format("{}-candidates-{}-reservoir-{}-neighbour.bmp", initialCandidates, reservoirSize, neighbourCount);
+        //             config.features.initialLightSamples     = initialCandidates;
+        //             config.features.numSamplesInReservoir   = reservoirSize;
+        //             config.features.numNeighboursToSample   = neighbourCount;
+        //             std::optional<ReservoirGrid> maybeGrid  = renderRayTraced(previousFrameGrid, scene, camera, embreeInterface, screen, config.features);
+        //             if (maybeGrid) { previousFrameGrid      = std::make_shared<ReservoirGrid>(maybeGrid.value()); }
+        //             screen.writeBitmapToFile(outPath);
+
+        //             progressbarCounts.update();
+        //         }
+        //         progressbarSizes.update();
+        //     }
+        //     progressBarCandidates.update();
+        // }
 
         while (!window.shouldClose()) {
             camera.resetLastDelta();
@@ -190,13 +283,14 @@ int main(int argc, char** argv) {
         // Load scene.
         Scene scene;
         std::string sceneName;
+        Trackball dummyCamera(&window, 30.0f);
         std::visit(make_visitor(
                        [&](const std::filesystem::path& path) {
                            scene = loadSceneFromFile(path, config.lights);
                            sceneName = path.stem().string();
                        },
                        [&](const SceneType& type) {
-                           scene = loadScenePrebuilt(type, config.dataPath);
+                           scene = loadScenePrebuilt(type, config.dataPath, dummyCamera, config.features);
                            sceneName = serialize(type);
                        }),
             config.scene);
@@ -274,6 +368,25 @@ static void drawLightsOpenGL(const Scene& scene, const Trackball& camera, int /*
                     glEnd();
                     glPopAttrib();
                 },
+                [](const DiskLight& light) {
+                    constexpr uint32_t SUBDIVISIONS = 64U;
+                    constexpr float ANGLE_INCREMENT = 360.0f / static_cast<float>(SUBDIVISIONS);
+                    glm::vec3 planeVector;
+                    if (light.normal.x == 0.0f) { planeVector = glm::normalize(glm::cross(light.normal, glm::vec3(1.0f, 0.0f, 0.0f))); }
+                    else                        { planeVector = glm::normalize(glm::cross(light.normal, glm::vec3(0.0f, 0.0f, 1.0f))); }
+                    glPushAttrib(GL_ALL_ATTRIB_BITS);
+                    glBegin(GL_TRIANGLE_FAN);
+                    glColor3fv(glm::value_ptr(light.color));
+                    glVertex3fv(glm::value_ptr(light.position));
+                    for (uint32_t subdivision = 0U; subdivision <= SUBDIVISIONS; subdivision++) {
+                        glm::mat3 rotation  = glm::rotate(subdivision * ANGLE_INCREMENT, light.normal);
+                        glm::vec3 position  = light.position + (light.radius * rotation * planeVector);
+                        glColor3fv(glm::value_ptr(light.color));
+                        glVertex3fv(glm::value_ptr(position));
+                    }
+                    glEnd();
+                    glPopAttrib();
+                },
                 [](auto) { /* any other type of light */ }),
             scene.lights[i]);
     }
@@ -324,6 +437,9 @@ void drawSceneOpenGL(const Scene& scene) {
                     enableLight(parallelogramLight.v0 + parallelogramLight.edge01, 0.25f * parallelogramLight.color1);
                     enableLight(parallelogramLight.v0 + parallelogramLight.edge02, 0.25f * parallelogramLight.color2);
                     enableLight(parallelogramLight.v0 + parallelogramLight.edge01 + parallelogramLight.edge02, 0.25f * parallelogramLight.color3);
+                },
+                [&](const DiskLight& diskLight) {
+                    enableLight(diskLight.position, diskLight.color);
                 },
                 [](auto) { /* any other type of light */ }),
             light);

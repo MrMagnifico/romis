@@ -86,22 +86,13 @@ void UiManager::drawMiscTab() {
 }
 
 void UiManager::drawSceneSelection() {
-    constexpr std::array items {
-        "SingleTriangle",
-        "Cube (segment light)",
-        "Cube (textured)",
-        "Cornell Box (with mirror)",
-        "Cornell Box (parallelogram light and mirror)",
-        "Cornell Nightclub",
-        "Monkey",
-        "Teapot",
-        "Dragon",
-        "Spheres",
-        "Custom",
-    };
-    if (ImGui::Combo("Scenes", reinterpret_cast<int*>(&sceneType), items.data(), int(items.size()))) {
+    constexpr auto availableScenes = magic_enum::enum_names<SceneType>();
+    std::vector<const char*> availableScenesPointers;
+    std::transform(std::begin(availableScenes), std::end(availableScenes), std::back_inserter(availableScenesPointers),
+                   [](const auto& str) { return str.data(); });
+    if (ImGui::Combo("Scene", reinterpret_cast<int*>(&sceneType), availableScenesPointers.data(), static_cast<int>(availableScenesPointers.size()))) {
         optDebugRayHit.reset();
-        scene               = loadScenePrebuilt(sceneType, config.dataPath);
+        scene               = loadScenePrebuilt(sceneType, config.dataPath, camera, config.features);
         selectedLightIdx    = scene.lights.empty() ? -1 : 0;
         embreeInterface.changeScene(scene);
         if (optDebugRayHit) {
@@ -229,6 +220,13 @@ void UiManager::drawLightControls() {
                     ImGui::ColorEdit3("Color 2", glm::value_ptr(light.color2));
                     ImGui::ColorEdit3("Color 3", glm::value_ptr(light.color3));
                 },
+                [&](DiskLight& light) {
+                    showImGuizmoTranslation(window, camera, light.position); // 3D controls to translate light source.
+                    ImGui::DragFloat3("Position", glm::value_ptr(light.position), 0.01f, -3.0f, 3.0f);
+                    ImGui::DragFloat3("Normal", glm::value_ptr(light.normal), 0.1f, -1.0f, 1.0f);
+                    ImGui::ColorEdit3("Color", glm::value_ptr(light.color));
+                    ImGui::DragFloat("Radius", &light.radius, 0.1f, 0.01f, 10.0f);
+                },
                 [](auto) { /* any other type of light */ }),
             scene.lights[size_t(selectedLightIdx)]);
     }
@@ -253,6 +251,10 @@ void UiManager::drawLightControls() {
             .color2 = glm::vec3(0, 0, 1),   // blue
             .color3 = glm::vec3(1, 1, 1)    // white
         });
+    }
+    if (ImGui::Button("Add disc light")) {
+        selectedLightIdx = int(scene.lights.size());
+        scene.lights.emplace_back(DiskLight { .position = glm::vec3(0.0f), .normal = glm::vec3(0.0f, 0.0f, 1.0f), .color = glm::vec3(1.0f), .radius = 0.5f });
     }
     if (selectedLightIdx >= 0 && ImGui::Button("Remove selected light")) {
         scene.lights.erase(std::begin(scene.lights) + selectedLightIdx);

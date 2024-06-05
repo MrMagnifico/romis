@@ -85,7 +85,7 @@ std::vector<Mesh> loadMesh(const std::filesystem::path& file, bool centerAndNorm
                 prevMaterialID = shape.mesh.material_ids[endTriangle];
 
             Mesh mesh;
-            std::unordered_map<Vertex, uint32_t, VertexHash> vertexCache;
+            std::unordered_map<uint32_t, uint32_t> vertexCache; // Map the index of a vertex as loaded by tinyobjloader to its index in the generated mesh
             for (size_t i = startTriangle * 3; i != endTriangle * 3; i += 3) {
                 const glm::vec3 v0 = construct_vec3(&inAttrib.vertices[3 * shape.mesh.indices[i + 0].vertex_index]);
                 const glm::vec3 v1 = construct_vec3(&inAttrib.vertices[3 * shape.mesh.indices[i + 1].vertex_index]);
@@ -108,12 +108,12 @@ std::vector<Mesh> loadMesh(const std::filesystem::path& file, bool centerAndNorm
                     if (tinyObjIndex.texcoord_index != -1 && !inAttrib.texcoords.empty())
                         vertex.texCoord = glm::vec2(inAttrib.texcoords[2 * tinyObjIndex.texcoord_index + 0], inAttrib.texcoords[2 * tinyObjIndex.texcoord_index + 1]);
 
-                    if (auto iter = vertexCache.find(vertex); iter != std::end(vertexCache)) {
+                    if (auto iter = vertexCache.find(tinyObjIndex.vertex_index); iter != std::end(vertexCache)) {
                         // Already visited this vertex? Reuse it!
                         triangle[j] = iter->second;
-                    } else {
+                    } else {                      
                         // New vertex? Create it and store it in the vertex cache.
-                        vertexCache[vertex] = triangle[j] = (unsigned)mesh.vertices.size();
+                        vertexCache[tinyObjIndex.vertex_index] = triangle[j] = mesh.vertices.size();
                         mesh.vertices.push_back(vertex);
                     }
                 }
@@ -133,6 +133,7 @@ std::vector<Mesh> loadMesh(const std::filesystem::path& file, bool centerAndNorm
                 }
                 mesh.material.ks = construct_vec3(objMaterial.specular);
                 mesh.material.shininess = objMaterial.shininess;
+                mesh.material.transparency = objMaterial.dissolve;
             }
 
             out.push_back(std::move(mesh));
