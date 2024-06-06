@@ -132,12 +132,6 @@ Scene loadScenePrebuilt(SceneType type, const std::filesystem::path& dataDir, Tr
         scene.lights.emplace_back(PointLight { glm::vec3(-1, 1, -1), glm::vec3(1) });
         scene.lights.emplace_back(DiskLight  { glm::vec3(1, -1, -1), glm::vec3(1.0f, 0.0f, 0.0f), glm::vec3(1.0f), 1.0f });
     } break;
-    case TheWoodenStaircase: {
-        auto subMeshes = loadMesh(dataDir / "the-wooden-staircase" / "the-wooden-staircase.obj", false);
-        std::move(std::begin(subMeshes), std::end(subMeshes), std::back_inserter(scene.meshes));
-        scene.lights.emplace_back(PointLight { glm::vec3(-0.004933f, 0.000721f, 0.434808f), glm::vec3(1.0f) });
-        scene.lights.emplace_back(PointLight { glm::vec3(0.623906f, -4.26118f, 3.44006f), glm::vec3(1.0f) });
-    } break;
     case ModernHall: {
         auto subMeshes = loadMesh(dataDir / "modern-hall" / "modern-hall.obj", false);
         std::move(std::begin(subMeshes), std::end(subMeshes), std::back_inserter(scene.meshes));
@@ -157,6 +151,18 @@ Scene loadScenePrebuilt(SceneType type, const std::filesystem::path& dataDir, Tr
         // Camera and tonemapping
         camera.setCamera(glm::vec3(-10.76f, 1.78f, -2.5f), glm::radians(glm::vec3(1.0f, 255.9f, 0.0f)), 18.0f);
         features.exposure = 5.0f;
+    } break;
+    case TheBreakfastRoom: {
+        auto subMeshes = loadMesh(dataDir / "the-breakfast-room" / "the-breakfast-room.obj", false);
+        std::move(std::begin(subMeshes), std::end(subMeshes), std::back_inserter(scene.meshes));
+
+        // Lighting arrangement
+        scene.lights.emplace_back(DiskLight { glm::vec3(-2.185f, 3.591f, -1.936f), glm::vec3(0.0f, -1.0f, 0.0f), glm::vec3(1.0f), 0.575f });
+        scene.lights.emplace_back(DiskLight { glm::vec3(0.953f, 3.591f, -1.936f), glm::vec3(0.0f, -1.0f, 0.0f), glm::vec3(1.0f), 0.575f });
+
+        // Camera and tonemapping
+        camera.setCamera(glm::vec3(-0.46f, -1.22f, -11.99f), glm::radians(glm::vec3(14.4f, 180.0f, 0.0f)), 19.5f);
+        features.exposure   = 15.0f;
     } break;
     };
     return scene;

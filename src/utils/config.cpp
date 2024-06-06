@@ -45,12 +45,12 @@ static std::ostream& operator<<(std::ostream& os, const SceneType& sceneType)
         os << "SceneType::CornellNightClub";
         break;
     }
-    case SceneType::TheWoodenStaircase: {
+    case SceneType::ModernHall: {
         os << "SceneType::TheWoodenStaircase";
         break;
     }
-    case SceneType::ModernHall: {
-        os << "SceneType::TheWoodenStaircase";
+    case SceneType::TheBreakfastRoom: {
+        os << "SceneType::TheBreakfastRoom";
         break;
     }
     }

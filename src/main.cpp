@@ -60,7 +60,7 @@ int main(int argc, char** argv) {
         Trackball camera    { &window, glm::radians(config.cameras[0].fieldOfView), config.cameras[0].distanceFromLookAt };
         camera.setCamera(config.cameras[0].lookAt, glm::radians(config.cameras[0].rotation), config.cameras[0].distanceFromLookAt);
 
-        SceneType sceneType = SceneType::ModernHall;
+        SceneType sceneType = SceneType::TheBreakfastRoom;
         std::optional<RayHit> optDebugRayHit;
         Scene scene         = loadScenePrebuilt(sceneType, config.dataPath, camera, config.features);
         EmbreeInterface embreeInterface(scene);
@@ -107,71 +107,71 @@ int main(int argc, char** argv) {
             }
         });
 
-        // Render R-OMIS convergence results
-        std::cout << "Rendering convergence results..." << std::endl;
-        std::filesystem::path resultsDir = std::filesystem::path(RENDERS_DIR) / "Final Results - Draft" / "convergence" / "modern-hall";
-        std::optional<ReservoirGrid> maybeGrid;
-        progressbar progressbarIterations(16);
-        for (uint32_t maxIterations = 1U; maxIterations <= 16U; maxIterations++) {
-            config.features.maxIterationsMIS = maxIterations;
+        // Render convergence results
+        // std::cout << "Rendering convergence results..." << std::endl;
+        // std::filesystem::path resultsDir = std::filesystem::path(RENDERS_DIR) / "Final Results - Draft" / "convergence" / "the-breakfast-room";
+        // std::optional<ReservoirGrid> maybeGrid;
+        // progressbar progressbarIterations(16);
+        // for (uint32_t maxIterations = 1U; maxIterations <= 16U; maxIterations++) {
+        //     config.features.maxIterationsMIS = maxIterations;
 
-            // R-MIS - Equal
-            std::filesystem::path outPath           = resultsDir / "rmis" / "equal" / std::format("{} iters.bmp", maxIterations);
-            config.features.rayTraceMode            = RayTraceMode::RMIS;
-            config.features.misWeightRMIS           = MISWeightRMIS::Equal;
-            std::optional<ReservoirGrid> maybeGrid  = renderRayTraced(previousFrameGrid, scene, camera, embreeInterface, screen, config.features);
-            if (maybeGrid) { previousFrameGrid      = std::make_shared<ReservoirGrid>(maybeGrid.value()); }
-            screen.writeBitmapToFile(outPath);
+        //     // R-MIS - Equal
+        //     std::filesystem::path outPath           = resultsDir / "rmis" / "equal" / std::format("{} iters.bmp", maxIterations);
+        //     config.features.rayTraceMode            = RayTraceMode::RMIS;
+        //     config.features.misWeightRMIS           = MISWeightRMIS::Equal;
+        //     std::optional<ReservoirGrid> maybeGrid  = renderRayTraced(previousFrameGrid, scene, camera, embreeInterface, screen, config.features);
+        //     if (maybeGrid) { previousFrameGrid      = std::make_shared<ReservoirGrid>(maybeGrid.value()); }
+        //     screen.writeBitmapToFile(outPath);
 
-            // R-MIS - Balance
-            outPath                                 = resultsDir / "rmis" / "balance" / std::format("{} iters.bmp", maxIterations);
-            config.features.rayTraceMode            = RayTraceMode::RMIS;
-            config.features.misWeightRMIS           = MISWeightRMIS::Balance;
-            maybeGrid                               = renderRayTraced(previousFrameGrid, scene, camera, embreeInterface, screen, config.features);
-            if (maybeGrid) { previousFrameGrid      = std::make_shared<ReservoirGrid>(maybeGrid.value()); }
-            screen.writeBitmapToFile(outPath);
+        //     // R-MIS - Balance
+        //     outPath                                 = resultsDir / "rmis" / "balance" / std::format("{} iters.bmp", maxIterations);
+        //     config.features.rayTraceMode            = RayTraceMode::RMIS;
+        //     config.features.misWeightRMIS           = MISWeightRMIS::Balance;
+        //     maybeGrid                               = renderRayTraced(previousFrameGrid, scene, camera, embreeInterface, screen, config.features);
+        //     if (maybeGrid) { previousFrameGrid      = std::make_shared<ReservoirGrid>(maybeGrid.value()); }
+        //     screen.writeBitmapToFile(outPath);
 
-            // R-OMIS - Direct
-            outPath                                 = resultsDir / "romis" / "direct" / std::format("{} iters.bmp", maxIterations);
-            config.features.rayTraceMode            = RayTraceMode::ROMIS;
-            config.features.useProgressiveROMIS     = false;
-            maybeGrid                               = renderRayTraced(previousFrameGrid, scene, camera, embreeInterface, screen, config.features);
-            if (maybeGrid) { previousFrameGrid      = std::make_shared<ReservoirGrid>(maybeGrid.value()); }
-            screen.writeBitmapToFile(outPath);
+        //     // R-OMIS - Direct
+        //     outPath                                 = resultsDir / "romis" / "direct" / std::format("{} iters.bmp", maxIterations);
+        //     config.features.rayTraceMode            = RayTraceMode::ROMIS;
+        //     config.features.useProgressiveROMIS     = false;
+        //     maybeGrid                               = renderRayTraced(previousFrameGrid, scene, camera, embreeInterface, screen, config.features);
+        //     if (maybeGrid) { previousFrameGrid      = std::make_shared<ReservoirGrid>(maybeGrid.value()); }
+        //     screen.writeBitmapToFile(outPath);
 
-            // R-OMIS - Progressive (U = 1)
-            outPath                                 = resultsDir / "romis" / "u1" / std::format("{} iters.bmp", maxIterations);
-            config.features.rayTraceMode            = RayTraceMode::ROMIS;
-            config.features.useProgressiveROMIS     = true;
-            config.features.progressiveUpdateMod    = 1U;
-            maybeGrid                               = renderRayTraced(previousFrameGrid, scene, camera, embreeInterface, screen, config.features);
-            if (maybeGrid) { previousFrameGrid      = std::make_shared<ReservoirGrid>(maybeGrid.value()); }
-            screen.writeBitmapToFile(outPath);
+        //     // R-OMIS - Progressive (U = 1)
+        //     outPath                                 = resultsDir / "romis" / "u1" / std::format("{} iters.bmp", maxIterations);
+        //     config.features.rayTraceMode            = RayTraceMode::ROMIS;
+        //     config.features.useProgressiveROMIS     = true;
+        //     config.features.progressiveUpdateMod    = 1U;
+        //     maybeGrid                               = renderRayTraced(previousFrameGrid, scene, camera, embreeInterface, screen, config.features);
+        //     if (maybeGrid) { previousFrameGrid      = std::make_shared<ReservoirGrid>(maybeGrid.value()); }
+        //     screen.writeBitmapToFile(outPath);
 
-            // R-OMIS - Progressive (U = 2)
-            outPath                                 = resultsDir / "romis" / "u2" / std::format("{} iters.bmp", maxIterations);
-            config.features.rayTraceMode            = RayTraceMode::ROMIS;
-            config.features.useProgressiveROMIS     = true;
-            config.features.progressiveUpdateMod    = 2U;
-            maybeGrid                               = renderRayTraced(previousFrameGrid, scene, camera, embreeInterface, screen, config.features);
-            if (maybeGrid) { previousFrameGrid      = std::make_shared<ReservoirGrid>(maybeGrid.value()); }
-            screen.writeBitmapToFile(outPath);
+        //     // R-OMIS - Progressive (U = 2)
+        //     outPath                                 = resultsDir / "romis" / "u2" / std::format("{} iters.bmp", maxIterations);
+        //     config.features.rayTraceMode            = RayTraceMode::ROMIS;
+        //     config.features.useProgressiveROMIS     = true;
+        //     config.features.progressiveUpdateMod    = 2U;
+        //     maybeGrid                               = renderRayTraced(previousFrameGrid, scene, camera, embreeInterface, screen, config.features);
+        //     if (maybeGrid) { previousFrameGrid      = std::make_shared<ReservoirGrid>(maybeGrid.value()); }
+        //     screen.writeBitmapToFile(outPath);
 
-            // R-OMIS - Progressive (U = 4)
-            outPath                                 = resultsDir / "romis" / "u4" / std::format("{} iters.bmp", maxIterations);
-            config.features.rayTraceMode            = RayTraceMode::ROMIS;
-            config.features.useProgressiveROMIS     = true;
-            config.features.progressiveUpdateMod    = 4U;
-            maybeGrid                               = renderRayTraced(previousFrameGrid, scene, camera, embreeInterface, screen, config.features);
-            if (maybeGrid) { previousFrameGrid      = std::make_shared<ReservoirGrid>(maybeGrid.value()); }
-            screen.writeBitmapToFile(outPath);
+        //     // R-OMIS - Progressive (U = 4)
+        //     outPath                                 = resultsDir / "romis" / "u4" / std::format("{} iters.bmp", maxIterations);
+        //     config.features.rayTraceMode            = RayTraceMode::ROMIS;
+        //     config.features.useProgressiveROMIS     = true;
+        //     config.features.progressiveUpdateMod    = 4U;
+        //     maybeGrid                               = renderRayTraced(previousFrameGrid, scene, camera, embreeInterface, screen, config.features);
+        //     if (maybeGrid) { previousFrameGrid      = std::make_shared<ReservoirGrid>(maybeGrid.value()); }
+        //     screen.writeBitmapToFile(outPath);
 
-            progressbarIterations.update();
-        }
+        //     progressbarIterations.update();
+        // }
 
         // Render R-OMIS neighbour count/reservoir size numbers
         // std::cout << "Rendering neighbour count/reservoir size variations" << std::endl;
-        // resultsDir                                  = std::filesystem::path(RENDERS_DIR) / "Final Results - Draft" / "neighbour-count-reservoir-size" / "modern-hall";
+        // resultsDir                                  = std::filesystem::path(RENDERS_DIR) / "Final Results - Draft" / "neighbour-count-reservoir-size" / "the-breakfast-room";
         // config.features.rayTraceMode                = RayTraceMode::ROMIS;
         // config.features.useProgressiveROMIS         = false;
         // std::vector<int32_t> initialCandidateCounts = {16, 64, 256};
