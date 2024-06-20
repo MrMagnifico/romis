@@ -304,6 +304,7 @@ void UiManager::drawRayTracingParams() {
 
         // Common parameters
         ImGui::Text("Common");
+        ImGui::SliderInt("Max iterations",  (int*) &config.features.maxIterations, 1, 64);
         ImGui::SliderInt("Samples per reservoir",   (int*) &config.features.numSamplesInReservoir,      1, 32);
         ImGui::SliderInt("Canonical sample count",  (int*) &config.features.initialLightSamples,        1, 256);
         ImGui::SliderInt("Neighbours to sample",    (int*) &config.features.numNeighboursToSample,      0, 10);
@@ -314,7 +315,6 @@ void UiManager::drawRayTracingParams() {
 
         // R-MIS/R-OMIS parameters
         ImGui::Text("R-MIS / R-OMIS");
-        ImGui::SliderInt("Max iterations",  (int*) &config.features.maxIterationsMIS, 1, 16);
         constexpr auto neighbourSelectionStrategies = magic_enum::enum_names<NeighbourSelectionStrategy>();
         std::vector<const char*> neighbourSelectionStrategiesPointers;
         std::transform(std::begin(neighbourSelectionStrategies), std::end(neighbourSelectionStrategies), std::back_inserter(neighbourSelectionStrategiesPointers),
@@ -326,7 +326,7 @@ void UiManager::drawRayTracingParams() {
                        [](const auto& str) { return str.data(); });
         ImGui::Combo("MIS weights (R-MIS)", (int*) &config.features.misWeightRMIS, misWeightPointers.data(), static_cast<int>(misWeightPointers.size()));
         ImGui::Checkbox("Progressive estimator (R-OMIS)", &config.features.useProgressiveROMIS);
-        ImGui::SliderInt("Progressive update modulo (R-OMIS)",  (int*) &config.features.progressiveUpdateMod, 1, config.features.maxIterationsMIS);
+        ImGui::SliderInt("Progressive update modulo (R-OMIS)",  (int*) &config.features.progressiveUpdateMod, 1, config.features.maxIterations);
 
         ImGui::Spacing();
         ImGui::Separator();

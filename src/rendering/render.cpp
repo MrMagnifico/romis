@@ -30,35 +30,39 @@ ReservoirGrid renderReSTIR(std::shared_ptr<ReservoirGrid> previousFrameGrid,
                            const EmbreeInterface& embreeInterface, Screen& screen,
                            const Features& features) {
     std::cout << "===== Rendering with ReSTIR =====" << std::endl;
-    PrimaryHitGrid primaryHits  = genPrimaryRayHits(scene, camera, embreeInterface, screen, features);
-    ReservoirGrid reservoirGrid = genInitialSamples(primaryHits, scene, embreeInterface, features, screen.resolution());
-    if (features.temporalReuse && previousFrameGrid)    { temporalReuse(reservoirGrid, *previousFrameGrid.get(), embreeInterface, screen, features); }
-    if (features.spatialReuse)                          { spatialReuse(reservoirGrid, embreeInterface, screen, features); }
+    glm::ivec2 windowResolution         = screen.resolution();
+    PrimaryHitGrid primaryHits          = genPrimaryRayHits(scene, camera, embreeInterface, screen, features);
+    PixelGrid finalPixelColors(windowResolution.y,   std::vector<glm::vec3>(windowResolution.x, glm::vec3(0.0f)));
+    ReservoirGrid currentGrid;
 
-    // Final shading
-    glm::ivec2 windowResolution = screen.resolution();
-    std::cout << "Final shading..." << std::endl;
-    progressbar progressBarPixels(windowResolution.y);
-    #ifdef NDEBUG
-    #pragma omp parallel for schedule(guided)
-    #endif
-    for (int y = 0; y < windowResolution.y; y++) {
-        for (int x = 0; x != windowResolution.x; x++) {
-            // Compute shading from final sample(s)
-            const Reservoir& reservoir  = reservoirGrid[y][x];
-            glm::vec3 finalColor        = finalShading(reservoir, reservoir.cameraRay, embreeInterface, features);
+    for (uint32_t iteration = 0U; iteration < features.maxIterations; iteration++) {
+        std::cout << "= Iteration " << iteration + 1 << std::endl;
+        progressbar progressBarPixels(windowResolution.y);
 
-            // Apply tone mapping and set final pixel color
-            if (features.enableToneMapping) { finalColor = exposureToneMapping(finalColor, features); }
-            screen.setPixel(x, y, finalColor);
+        // Carry out ReSTIR steps
+        currentGrid = genInitialSamples(primaryHits, scene, embreeInterface, features, screen.resolution());
+        if (features.temporalReuse && previousFrameGrid)    { temporalReuse(currentGrid, *previousFrameGrid.get(), embreeInterface, screen, features); }
+        if (features.spatialReuse)                          { spatialReuse(currentGrid, embreeInterface, screen, features); }
+
+        std::cout << "Shading final samples..." << std::endl;
+        #ifdef NDEBUG
+        #pragma omp parallel for schedule(guided)
+        #endif
+        for (int y = 0; y < windowResolution.y; y++) {
+            for (int x = 0; x != windowResolution.x; x++) {
+                // Accumulate shading from final sample(s) to running sum
+                const Reservoir& reservoir  = currentGrid[y][x];
+                finalPixelColors[y][x]      += finalShading(reservoir, reservoir.cameraRay, embreeInterface, features);
+            }
+            #pragma omp critical
+            progressBarPixels.update();
         }
-        #pragma omp critical
-        progressBarPixels.update();
+        std::cout << std::endl;
     }
-    std::cout << std::endl;
 
-    // Return current frame's final grid for temporal reuse
-    return reservoirGrid;
+    // Produce final color and return current frame's final grid for temporal reuse
+    combineToScreen(screen, finalPixelColors, features);
+    return currentGrid;
 }
 
 void renderRMIS(const Scene& scene, const Trackball& camera, const EmbreeInterface& embreeInterface, Screen& screen, const Features& features) {
@@ -69,7 +73,7 @@ void renderRMIS(const Scene& scene, const Trackball& camera, const EmbreeInterfa
     ResampleIndicesGrid resampleIndices = generateResampleIndicesGrid(primaryHits, windowResolution, features);
     PixelGrid finalPixelColors(windowResolution.y,   std::vector<glm::vec3>(windowResolution.x, glm::vec3(0.0f)));
 
-    for (uint32_t iteration = 0U; iteration < features.maxIterationsMIS; iteration++) {
+    for (uint32_t iteration = 0U; iteration < features.maxIterations; iteration++) {
         std::cout << "= Iteration " << iteration + 1 << std::endl;
         ReservoirGrid reservoirGrid = genInitialSamples(primaryHits, scene, embreeInterface, features, windowResolution);
         progressbar progressBarPixels(windowResolution.y);
@@ -138,7 +142,7 @@ void renderROMIS(const Scene& scene, const Trackball& camera, const EmbreeInterf
     const int32_t totalSamples              = totalDistributions * features.numSamplesInReservoir; // All pixels generate the same number of samples and sample the same number of neighbours
     const int32_t fractionOfTotalSamples    = features.numSamplesInReservoir / totalDistributions; // Redundant? Yes. Helps with code clarity? Also yes
 
-    for (uint32_t iteration = 0U; iteration < features.maxIterationsMIS; iteration++) {
+    for (uint32_t iteration = 0U; iteration < features.maxIterations; iteration++) {
         std::cout << "= Iteration " << iteration + 1 << std::endl;
         ReservoirGrid reservoirGrid = genInitialSamples(primaryHits, scene, embreeInterface, features, windowResolution);
         progressbar progressbarPixels(static_cast<int32_t>(windowResolution.y));

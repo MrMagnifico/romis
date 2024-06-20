@@ -164,6 +164,17 @@ Scene loadScenePrebuilt(SceneType type, const std::filesystem::path& dataDir, Tr
         camera.setCamera(glm::vec3(-0.46f, -1.22f, -11.99f), glm::radians(glm::vec3(14.4f, 180.0f, 0.0f)), 19.5f);
         features.exposure   = 15.0f;
     } break;
+    case TheModernLivingRoom: {
+        auto subMeshes = loadMesh(dataDir / "the-modern-living-room" / "the-modern-living-room.obj", false);
+        std::move(std::begin(subMeshes), std::end(subMeshes), std::back_inserter(scene.meshes));
+
+        // Lighting arrangement
+        scene.lights.emplace_back(DiskLight { glm::vec3(-3.193f, 2.676f, -1.803f), glm::vec3(0.0f, -1.0f, 0.0f), glm::vec3(1.0f), 1.0f });
+
+        // Camera and tonemapping
+        camera.setCamera(glm::vec3(-1.68f, 0.81f, -1.67f), glm::radians(glm::vec3(5.8f, -9.0f, 0.0f)), 4.0f);
+        features.exposure   = 15.0f;
+    } break;
     };
     return scene;
 }

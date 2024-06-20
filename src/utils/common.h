@@ -108,6 +108,7 @@ struct Features {
 
     // Shared R-MIS/ReSTIR feature flag(s) and parameter(s)
     RayTraceMode rayTraceMode           = RayTraceMode::ROMIS;
+    uint32_t maxIterations              = 5U;
     bool initialSamplesVisibilityCheck  = false;
     uint32_t numSamplesInReservoir      = 4U;
     uint32_t initialLightSamples        = 64U;
@@ -120,7 +121,6 @@ struct Features {
     float neighbourMaxNormalAngleDifferenceRadians  = 0.436332f;
 
     // R-MIS/R-OMIS parameter(s)
-    uint32_t maxIterationsMIS                               = 5U;
     NeighbourSelectionStrategy neighbourSelectionStrategy   = NeighbourSelectionStrategy::Similar;
     MISWeightRMIS misWeightRMIS                             = MISWeightRMIS::Equal;
     bool useProgressiveROMIS                                = false;
@@ -131,10 +131,10 @@ struct Features {
     bool unbiasedCombination            = false;
     bool spatialReuse                   = true;
     bool spatialReuseVisibilityCheck    = false;
-    bool temporalReuse                  = true;
+    bool temporalReuse                  = false;
 
     // ReSTIR parameters
-    uint32_t spatialResamplingPasses    = 2U;
+    uint32_t spatialResamplingPasses    = 3U;
     uint32_t temporalClampM             = 20U;
 
     // Misc parameters
@@ -148,7 +148,7 @@ struct Features {
                 CEREAL_NVP(maxReflectionRecursion),
                 CEREAL_NVP(rayTraceMode), CEREAL_NVP(initialSamplesVisibilityCheck), CEREAL_NVP(numSamplesInReservoir), CEREAL_NVP(initialLightSamples), CEREAL_NVP(numNeighboursToSample), CEREAL_NVP(spatialResampleRadius),
                 CEREAL_NVP(neighbourSameGeometry), CEREAL_NVP(neighbourMaxDepthDifferenceFraction), CEREAL_NVP(neighbourMaxNormalAngleDifferenceRadians),
-                CEREAL_NVP(maxIterationsMIS), CEREAL_NVP(neighbourSelectionStrategy), CEREAL_NVP(misWeightRMIS), CEREAL_NVP(useProgressiveROMIS), CEREAL_NVP(progressiveUpdateMod), CEREAL_NVP(saveAlphasVisualisation),
+                CEREAL_NVP(maxIterations), CEREAL_NVP(neighbourSelectionStrategy), CEREAL_NVP(misWeightRMIS), CEREAL_NVP(useProgressiveROMIS), CEREAL_NVP(progressiveUpdateMod), CEREAL_NVP(saveAlphasVisualisation),
                 CEREAL_NVP(unbiasedCombination), CEREAL_NVP(spatialReuse), CEREAL_NVP(spatialReuseVisibilityCheck), CEREAL_NVP(temporalReuse),
                 CEREAL_NVP(spatialResamplingPasses), CEREAL_NVP(temporalClampM),
                 CEREAL_NVP(enableToneMapping), CEREAL_NVP(gamma), CEREAL_NVP(exposure)); 

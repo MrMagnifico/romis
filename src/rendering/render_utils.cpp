@@ -54,7 +54,7 @@ ReservoirGrid genInitialSamples(const PrimaryHitGrid& primaryHits, const Scene& 
 glm::vec3 finalShading(const Reservoir& reservoir, const Ray& primaryRay, const EmbreeInterface& embreeInterface, const Features& features) {
     glm::vec3 finalColor(0.0f);
     for (const SampleData& sample : reservoir.outputSamples) {
-        glm::vec3 sampleColor   = testVisibilityLightSample(sample.lightSample.position, embreeInterface, features, primaryRay, reservoir.hitInfo)              ?
+        glm::vec3 sampleColor   = testVisibilityLightSample(sample.lightSample.position, embreeInterface, features, primaryRay, reservoir.hitInfo)  ?
                                   computeShading(sample.lightSample.position, sample.lightSample.color, features, primaryRay, reservoir.hitInfo)    :
                                   glm::vec3(0.0f);
         sampleColor             *= sample.outputWeight;
@@ -74,7 +74,7 @@ void combineToScreen(Screen& screen, const PixelGrid& finalPixelColors, const Fe
     #endif
     for (int y = 0; y < windowResolution.y; y++) {
         for (int x = 0; x != windowResolution.x; x++) {
-            glm::vec3 finalColor = finalPixelColors[y][x] / static_cast<float>(features.maxIterationsMIS);
+            glm::vec3 finalColor = finalPixelColors[y][x] / static_cast<float>(features.maxIterations);
             if (features.enableToneMapping) { finalColor = exposureToneMapping(finalColor, features); }
             screen.setPixel(x, y, finalColor);
         }

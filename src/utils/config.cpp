@@ -53,6 +53,10 @@ static std::ostream& operator<<(std::ostream& os, const SceneType& sceneType)
         os << "SceneType::TheBreakfastRoom";
         break;
     }
+    case SceneType::TheModernLivingRoom: {
+        os << "SceneType::TheModernLivingRoom";
+        break;
+    }
     }
     return os;
 }

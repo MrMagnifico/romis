@@ -26,6 +26,7 @@ enum SceneType {
     Monkey,
     ModernHall,
     TheBreakfastRoom,
+    TheModernLivingRoom,
 };
 
 struct Scene {

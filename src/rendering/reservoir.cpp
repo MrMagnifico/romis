@@ -88,7 +88,7 @@ void Reservoir::combineUnbiased(const std::span<Reservoir>& reservoirStream, Res
             const SampleData& finalReservoirSample  = finalReservoir.outputSamples[outputSampleIdx]; 
             float pdfValue                          = targetPDF(finalReservoirSample.lightSample, reservoir.cameraRay, reservoir.hitInfo, features);
             if (features.spatialReuseVisibilityCheck)   { pdfValue *= testVisibilityLightSample(finalReservoirSample.lightSample.position, embreeInterface, features, reservoir.cameraRay, reservoir.hitInfo); }
-            if (pdfValue > 0.0f)                        { numValidSamples[outputSampleIdx] += reservoir.totalSampleNums(); }
+            if (pdfValue > 0.0f)                        { numValidSamples[outputSampleIdx] += reservoir.sampleNums[outputSampleIdx]; }
         }
     }
     
