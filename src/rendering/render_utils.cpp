@@ -14,7 +14,6 @@ PrimaryHitGrid genPrimaryRayHits(const Scene& scene, const Trackball& camera, co
     glm::ivec2 windowResolution = screen.resolution();
     PrimaryHitGrid primaryHits(windowResolution.y, std::vector<RayHit>(windowResolution.x));
 
-    progressbar progressbar(windowResolution.y);
     std::cout << "Primary rays computation..." << std::endl;
     #ifdef NDEBUG
     #pragma omp parallel for schedule(guided)
@@ -26,16 +25,12 @@ PrimaryHitGrid genPrimaryRayHits(const Scene& scene, const Trackball& camera, co
             primaryHits[y][x].ray = camera.generateRay(normalizedPixelPos); 
             embreeInterface.closestHit(primaryHits[y][x].ray, primaryHits[y][x].hit);
         }
-        #pragma omp critical
-        progressbar.update();
     }
-    std::cout << std::endl;
     return primaryHits;
 }
 
 ReservoirGrid genInitialSamples(const PrimaryHitGrid& primaryHits, const Scene& scene, const EmbreeInterface& embreeInterface, const Features& features, const glm::ivec2& windowResolution) {
     ReservoirGrid initialSamples(windowResolution.y, std::vector<Reservoir>(windowResolution.x, Reservoir(features.numSamplesInReservoir)));
-    progressbar progressbar(windowResolution.y);
     std::cout << "Initial light samples generation..." << std::endl;
     #ifdef NDEBUG
     #pragma omp parallel for schedule(guided)
@@ -44,14 +39,11 @@ ReservoirGrid genInitialSamples(const PrimaryHitGrid& primaryHits, const Scene& 
         for (int x = 0; x != windowResolution.x; x++) {
             initialSamples[y][x] = genCanonicalSamples(scene, embreeInterface, features, primaryHits[y][x]);
         }
-        #pragma omp critical
-        progressbar.update();
     }
-    std::cout << std::endl;
     return initialSamples;
 }
 
-glm::vec3 finalShading(const Reservoir& reservoir, const Ray& primaryRay, const EmbreeInterface& embreeInterface, const Features& features) {
+glm::vec3 finalShadingReSTIR(const Reservoir& reservoir, const Ray& primaryRay, const EmbreeInterface& embreeInterface, const Features& features) {
     glm::vec3 finalColor(0.0f);
     for (const SampleData& sample : reservoir.outputSamples) {
         glm::vec3 sampleColor   = testVisibilityLightSample(sample.lightSample.position, embreeInterface, features, primaryRay, reservoir.hitInfo)  ?
@@ -68,7 +60,6 @@ glm::vec3 finalShading(const Reservoir& reservoir, const Ray& primaryRay, const 
 void combineToScreen(Screen& screen, const PixelGrid& finalPixelColors, const Features& features) {
     glm::ivec2 windowResolution = screen.resolution();
     std::cout << "Iteration combination..." << std::endl;
-    progressbar progressbarPixels(static_cast<int32_t>(windowResolution.y));
     #ifdef NDEBUG
     #pragma omp parallel for schedule(guided)
     #endif
@@ -78,10 +69,7 @@ void combineToScreen(Screen& screen, const PixelGrid& finalPixelColors, const Fe
             if (features.enableToneMapping) { finalColor = exposureToneMapping(finalColor, features); }
             screen.setPixel(x, y, finalColor);
         }
-        #pragma omp critical
-        progressbarPixels.update();
     }
-    std::cout << std::endl;
 }
 
 void spatialReuse(ReservoirGrid& reservoirGrid, const EmbreeInterface& embreeInterface, const Screen& screen, const Features& features) {
@@ -95,7 +83,6 @@ void spatialReuse(ReservoirGrid& reservoirGrid, const EmbreeInterface& embreeInt
     ReservoirGrid prevIteration = reservoirGrid;
     for (uint32_t pass = 0U; pass < features.spatialResamplingPasses; pass++) {
         std::cout << "Pass " << pass + 1 << std::endl;
-        progressbar progressBarPixels(windowResolution.y);
         #ifdef NDEBUG
         #pragma omp parallel for schedule(guided)
         #endif
@@ -131,10 +118,7 @@ void spatialReuse(ReservoirGrid& reservoirGrid, const EmbreeInterface& embreeInt
                 else                                { Reservoir::combineBiased(selected, combined, features); }
                 reservoirGrid[y][x] = combined;
             }
-            #pragma omp critical
-            progressBarPixels.update();
         }
-        std::cout << std::endl;
         prevIteration = reservoirGrid;
     }
 }
@@ -144,7 +128,6 @@ void temporalReuse(ReservoirGrid& reservoirGrid, ReservoirGrid& previousFrameGri
     glm::ivec2 windowResolution = screen.resolution();
 
     std::cout << "Temporal reuse..." << std::endl;
-    progressbar progressBarPixels(windowResolution.y);
     #ifdef NDEBUG
     #pragma omp parallel for schedule(guided)
     #endif
@@ -170,10 +153,7 @@ void temporalReuse(ReservoirGrid& reservoirGrid, ReservoirGrid& previousFrameGri
             Reservoir::combineBiased(pixelAndPredecessor, combined, features); // Samples from temporal predecessor should be visible, no need to do unbiased combination
             reservoirGrid[y][x]                             = combined;
         }
-        #pragma omp critical
-        progressBarPixels.update();
     }
-    std::cout << std::endl;
 }
 
 float generalisedBalanceHeuristic(const LightSample& sample, const std::vector<Reservoir>& allPixels,

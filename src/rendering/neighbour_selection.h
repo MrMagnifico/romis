@@ -13,8 +13,6 @@ DISABLE_WARNINGS_POP()
 #include <vector>
 
 
-using ResampleIndicesGrid = std::vector<std::vector<std::vector<glm::ivec2>>>;
-
 bool areSimilar(const RayHit& lhs, const RayHit& rhs, const Features& features);
 std::vector<glm::ivec2> indicesRandom(int32_t x, int32_t y,
                                       const glm::ivec2& windowResolution, const Features& features);

@@ -19,19 +19,21 @@ enum class Color {
     Blue
 };
 
-using PrimaryHitGrid    = std::vector<std::vector<RayHit>>;
-using MatrixGrid        = std::vector<std::vector<Eigen::MatrixXf>>;
-using VectorGrid        = std::vector<std::vector<Eigen::VectorXf>>;
-using PixelGrid         = std::vector<std::vector<glm::vec3>>;
+using PrimaryHitGrid        = std::vector<std::vector<RayHit>>;
+using MatrixGrid            = std::vector<std::vector<Eigen::MatrixXf>>;
+using VectorGrid            = std::vector<std::vector<Eigen::VectorXf>>;
+using PixelGrid             = std::vector<std::vector<glm::vec3>>;
+using ResampleIndicesGrid   = std::vector<std::vector<std::vector<glm::ivec2>>>;
 
 // Common
 PrimaryHitGrid genPrimaryRayHits(const Scene& scene, const Trackball& camera, const EmbreeInterface& embreeInterface, const Screen& screen, const Features& features);
 ReservoirGrid genInitialSamples(const PrimaryHitGrid& primaryHits, const Scene& scene, const EmbreeInterface& embreeInterface, const Features& features, const glm::ivec2& windowResolution);
-glm::vec3 finalShading(const Reservoir& reservoir, const Ray& primaryRay, const EmbreeInterface& embreeInterface, const Features& features);
+glm::vec3 finalShadingReSTIR(const Reservoir& reservoir, const Ray& primaryRay, const EmbreeInterface& embreeInterface, const Features& features);
 void combineToScreen(Screen& screen, const PixelGrid& finalPixelColors, const Features& features);
 
 // ReSTIR-specific
-void spatialReuse(ReservoirGrid& reservoirGrid, const EmbreeInterface& embreeInterface, const Screen& screen, const Features& features);
+void spatialReuse(ReservoirGrid& reservoirGrid, const EmbreeInterface& embreeInterface,
+                  const Screen& screen, const Features& features);
 void temporalReuse(ReservoirGrid& reservoirGrid, ReservoirGrid& previousFrameGrid, const EmbreeInterface& embreeInterface,
                    Screen& screen, const Features& features);
 

@@ -31,20 +31,40 @@ ReservoirGrid renderReSTIR(std::shared_ptr<ReservoirGrid> previousFrameGrid,
                            const Features& features) {
     std::cout << "===== Rendering with ReSTIR =====" << std::endl;
     glm::ivec2 windowResolution         = screen.resolution();
-    PrimaryHitGrid primaryHits          = genPrimaryRayHits(scene, camera, embreeInterface, screen, features);
     PixelGrid finalPixelColors(windowResolution.y,   std::vector<glm::vec3>(windowResolution.x, glm::vec3(0.0f)));
     ReservoirGrid currentGrid;
 
+    auto start      = std::chrono::high_resolution_clock::now();
+    PrimaryHitGrid primaryHits  = genPrimaryRayHits(scene, camera, embreeInterface, screen, features);
+    auto end        = std::chrono::high_resolution_clock::now();
+    auto duration   = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+    std::cout << std::format("# Primary rays time: {}ms\n", duration);
+
     for (uint32_t iteration = 0U; iteration < features.maxIterations; iteration++) {
         std::cout << "= Iteration " << iteration + 1 << std::endl;
-        progressbar progressBarPixels(windowResolution.y);
 
         // Carry out ReSTIR steps
+        // Initial candidate generation
+        start = std::chrono::high_resolution_clock::now();
         currentGrid = genInitialSamples(primaryHits, scene, embreeInterface, features, screen.resolution());
+        end      = std::chrono::high_resolution_clock::now();
+        duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+        std::cout << std::format("# Initial samples time: {}ms\n", duration);
+        // Temporal resampling
+        start = std::chrono::high_resolution_clock::now();
         if (features.temporalReuse && previousFrameGrid)    { temporalReuse(currentGrid, *previousFrameGrid.get(), embreeInterface, screen, features); }
+        end      = std::chrono::high_resolution_clock::now();
+        duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+        std::cout << std::format("# Temporal reuse time: {}ms\n", duration);
+        // Spatial resampling
+        start = std::chrono::high_resolution_clock::now();
         if (features.spatialReuse)                          { spatialReuse(currentGrid, embreeInterface, screen, features); }
+        end      = std::chrono::high_resolution_clock::now();
+        duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+        std::cout << std::format("# Spatial reuse time: {}ms\n", duration);
 
         std::cout << "Shading final samples..." << std::endl;
+        start = std::chrono::high_resolution_clock::now();
         #ifdef NDEBUG
         #pragma omp parallel for schedule(guided)
         #endif
@@ -52,16 +72,20 @@ ReservoirGrid renderReSTIR(std::shared_ptr<ReservoirGrid> previousFrameGrid,
             for (int x = 0; x != windowResolution.x; x++) {
                 // Accumulate shading from final sample(s) to running sum
                 const Reservoir& reservoir  = currentGrid[y][x];
-                finalPixelColors[y][x]      += finalShading(reservoir, reservoir.cameraRay, embreeInterface, features);
+                finalPixelColors[y][x]      += finalShadingReSTIR(reservoir, reservoir.cameraRay, embreeInterface, features);
             }
-            #pragma omp critical
-            progressBarPixels.update();
         }
-        std::cout << std::endl;
+        end      = std::chrono::high_resolution_clock::now();
+        duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+        std::cout << std::format("# Final shading time: {}ms\n", duration);
     }
 
     // Produce final color and return current frame's final grid for temporal reuse
+    start   = std::chrono::high_resolution_clock::now();
     combineToScreen(screen, finalPixelColors, features);
+    end      = std::chrono::high_resolution_clock::now();
+    duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+    std::cout << std::format("# Iteration combination time: {}ms\n", duration);
     return currentGrid;
 }
 
@@ -69,14 +93,33 @@ void renderRMIS(const Scene& scene, const Trackball& camera, const EmbreeInterfa
     std::cout << "===== Rendering with R-MIS =====" << std::endl;
     glm::ivec2 windowResolution         = screen.resolution();
     const uint32_t totalDistributions   = features.numNeighboursToSample + 1U; // Original pixel and neighbours
-    PrimaryHitGrid primaryHits          = genPrimaryRayHits(scene, camera, embreeInterface, screen, features);
-    ResampleIndicesGrid resampleIndices = generateResampleIndicesGrid(primaryHits, windowResolution, features);
     PixelGrid finalPixelColors(windowResolution.y,   std::vector<glm::vec3>(windowResolution.x, glm::vec3(0.0f)));
+
+    // Generate primary hits
+    auto start      = std::chrono::high_resolution_clock::now();
+    PrimaryHitGrid primaryHits          = genPrimaryRayHits(scene, camera, embreeInterface, screen, features);
+    auto end        = std::chrono::high_resolution_clock::now();
+    auto duration   = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+    std::cout << std::format("# Primary rays time: {}ms\n", duration);
+
+    // Generate indices of neighbours to resample from
+    start       = std::chrono::high_resolution_clock::now();
+    ResampleIndicesGrid resampleIndices = generateResampleIndicesGrid(primaryHits, windowResolution, features);
+    end         = std::chrono::high_resolution_clock::now();
+    duration    = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+    std::cout << std::format("# Resample indices grid time: {}ms\n", duration);
+
 
     for (uint32_t iteration = 0U; iteration < features.maxIterations; iteration++) {
         std::cout << "= Iteration " << iteration + 1 << std::endl;
+
+        start       = std::chrono::high_resolution_clock::now();
         ReservoirGrid reservoirGrid = genInitialSamples(primaryHits, scene, embreeInterface, features, windowResolution);
-        progressbar progressBarPixels(windowResolution.y);
+        end         = std::chrono::high_resolution_clock::now();
+        duration    = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+        std::cout << std::format("# Initial samples time: {}ms\n", duration);
+
+        start = std::chrono::high_resolution_clock::now();
         #ifdef NDEBUG
         #pragma omp parallel for schedule(guided)
         #endif
@@ -114,25 +157,43 @@ void renderRMIS(const Scene& scene, const Trackball& camera, const EmbreeInterfa
                 // Accumulate iteration results
                 finalPixelColors[y][x] += finalColor;
             }
-            #pragma omp critical
-            progressBarPixels.update();
         }
-        std::cout << std::endl;
+
+        // Time iteration
+        end         = std::chrono::high_resolution_clock::now();
+        duration    = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+        std::cout << std::format("# RMIS shading time: {}ms\n", duration);
     }
+
+    // Combine final results to screen
+    start = std::chrono::high_resolution_clock::now();
     combineToScreen(screen, finalPixelColors, features);
+    end      = std::chrono::high_resolution_clock::now();
+    duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+    std::cout << std::format("# Iteration combination time: {}ms\n", duration);
 }
 
 void renderROMIS(const Scene& scene, const Trackball& camera, const EmbreeInterface& embreeInterface, Screen& screen, const Features& features) {
-    // Used in both direct and progressive estimators
+    // ===== Used in both direct and progressive estimators =====
     std::cout << "===== Rendering with R-OMIS ====="   << std::endl;
     glm::ivec2 windowResolution             = screen.resolution();
-    PrimaryHitGrid primaryHits              = genPrimaryRayHits(scene, camera, embreeInterface, screen, features);
-    ResampleIndicesGrid resampleIndices     = generateResampleIndicesGrid(primaryHits, windowResolution, features);
     const uint32_t totalDistributions       = features.numNeighboursToSample + 1U; // Original pixel and neighbours
     MatrixGrid techniqueMatrices(windowResolution.y,        std::vector<Eigen::MatrixXf>(windowResolution.x, Eigen::MatrixXf::Zero(totalDistributions, totalDistributions)));
     VectorGrid contributionVectorsRed(windowResolution.y,   std::vector<Eigen::VectorXf>(windowResolution.x, Eigen::VectorXf::Zero(totalDistributions)));
     VectorGrid contributionVectorsGreen(windowResolution.y, std::vector<Eigen::VectorXf>(windowResolution.x, Eigen::VectorXf::Zero(totalDistributions)));
     VectorGrid contributionVectorsBlue(windowResolution.y,  std::vector<Eigen::VectorXf>(windowResolution.x, Eigen::VectorXf::Zero(totalDistributions)));
+    // Generate primary hits
+    auto start      = std::chrono::high_resolution_clock::now();
+    PrimaryHitGrid primaryHits          = genPrimaryRayHits(scene, camera, embreeInterface, screen, features);
+    auto end        = std::chrono::high_resolution_clock::now();
+    auto duration   = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+    std::cout << std::format("# Primary rays time: {}ms\n", duration);
+    // Generate indices of neighbours to resample from
+    start       = std::chrono::high_resolution_clock::now();
+    ResampleIndicesGrid resampleIndices = generateResampleIndicesGrid(primaryHits, windowResolution, features);
+    end         = std::chrono::high_resolution_clock::now();
+    duration    = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+    std::cout << std::format("# Resample indices grid time: {}ms\n", duration);
 
     // ===== PROGRESSIVE ONLY =====
     PixelGrid finalPixelColors(windowResolution.y,   std::vector<glm::vec3>(windowResolution.x, glm::vec3(0.0f)));
@@ -144,8 +205,14 @@ void renderROMIS(const Scene& scene, const Trackball& camera, const EmbreeInterf
 
     for (uint32_t iteration = 0U; iteration < features.maxIterations; iteration++) {
         std::cout << "= Iteration " << iteration + 1 << std::endl;
+
+        start       = std::chrono::high_resolution_clock::now();
         ReservoirGrid reservoirGrid = genInitialSamples(primaryHits, scene, embreeInterface, features, windowResolution);
-        progressbar progressbarPixels(static_cast<int32_t>(windowResolution.y));
+        end         = std::chrono::high_resolution_clock::now();
+        duration    = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+        std::cout << std::format("# Initial samples time: {}ms\n", duration);
+
+        start = std::chrono::high_resolution_clock::now();
         #ifdef NDEBUG
         #pragma omp parallel for schedule(guided)
         #endif
@@ -223,22 +290,23 @@ void renderROMIS(const Scene& scene, const Trackball& camera, const EmbreeInterf
                     }
                 }
             }
-            #pragma omp critical
-            progressbarPixels.update();
         }
-        std::cout << std::endl;
-
         // Save alphas visualisation if requested
         if (features.saveAlphasVisualisation) { visualiseAlphas(techniqueMatrices, contributionVectorsRed, contributionVectorsGreen, contributionVectorsBlue,
                                                                 windowResolution, features); }
+
+        // Time iteration
+        end         = std::chrono::high_resolution_clock::now();
+        duration    = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+        std::cout << std::format("# ROMIS shading time: {}ms\n", duration);
     }
 
     // Compute final results
+    start = std::chrono::high_resolution_clock::now();
     if (features.useProgressiveROMIS) { combineToScreen(screen, finalPixelColors, features); }
     else {
         // Solve linear system on per-pixel basis
         std::cout << "Integral component summation..." << std::endl;
-        progressbar progressbarPixels(static_cast<int32_t>(windowResolution.y));
         #ifdef NDEBUG
         #pragma omp parallel for schedule(guided)
         #endif
@@ -261,11 +329,12 @@ void renderROMIS(const Scene& scene, const Trackball& camera, const EmbreeInterf
                 if (features.enableToneMapping) { finalColor = exposureToneMapping(finalColor, features); }
                 screen.setPixel(x, y, finalColor);
             }
-            #pragma omp critical
-            progressbarPixels.update();
         }
-        std::cout << std::endl;
     }
+    // Time iteration combination
+    end         = std::chrono::high_resolution_clock::now();
+    duration    = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+    std::cout << std::format("# Iteration combination time: {}ms\n", duration);
 }
 
 
